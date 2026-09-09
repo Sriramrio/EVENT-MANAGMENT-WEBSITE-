@@ -1,0 +1,3 @@
+import type { ButtonHTMLAttributes,PropsWithChildren } from 'react';
+type Variant='primary'|'secondary'|'danger'|'ghost'; interface Props extends ButtonHTMLAttributes<HTMLButtonElement>{variant?:Variant;loading?:boolean;}
+export function Button({variant='primary',loading=false,children,className='',disabled,...props}:PropsWithChildren<Props>){const cn=variant==='ghost'?'btn bg-transparent text-slate-600 hover:bg-slate-100':`btn btn-${variant}`;return <button className={`${cn} ${className}`} disabled={disabled||loading} aria-busy={loading||undefined} {...props}>{loading&&<span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-r-transparent" aria-hidden="true"/>}{children}</button>;}

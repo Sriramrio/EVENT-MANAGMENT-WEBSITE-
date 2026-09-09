@@ -1,0 +1,53 @@
+{
+  "name": "msme-sangamam-stall-booking-admin",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "lint": "tsc -b --noEmit",
+    "test": "vitest run src",
+    "test:e2e": "playwright test",
+    "typecheck": "tsc -b --noEmit"
+  },
+  "dependencies": {
+    "@hookform/resolvers": "^5.8.0",
+    "@tanstack/react-query": "^5.101.4",
+    "@vitejs/plugin-react": "latest",
+    "@zxing/library": "^0.23.0",
+    "axios": "latest",
+    "dexie": "latest",
+    "html-to-image": "^1.11.13",
+    "html2canvas": "^1.4.1",
+    "html2pdf.js": "^0.14.0",
+    "lucide-react": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "react-hook-form": "^7.85.0",
+    "react-hot-toast": "^2.6.0",
+    "react-qr-code": "^2.2.0",
+    "react-router-dom": "latest",
+    "recharts": "latest",
+    "zod": "^4.4.3",
+    "zustand": "latest"
+  },
+  "devDependencies": {
+    "@eslint/js": "latest",
+    "@playwright/test": "latest",
+    "@tailwindcss/postcss": "^4.3.1",
+    "@testing-library/jest-dom": "latest",
+    "@testing-library/react": "latest",
+    "@types/node": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "autoprefixer": "^10.5.0",
+    "eslint": "latest",
+    "postcss": "^8.5.15",
+    "tailwindcss": "^3.4.19",
+    "typescript": "latest",
+    "vite": "latest",
+    "vitest": "latest"
+  }
+}

@@ -1,0 +1,1676 @@
+[
+  {
+    "sourceRow": 2,
+    "size": "3x3",
+    "stallNumber": "B1",
+    "blocked": true,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 3,
+    "size": "3x3",
+    "stallNumber": "B2",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 4,
+    "size": "3x3",
+    "stallNumber": "B3",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 5,
+    "size": "3x3",
+    "stallNumber": "B4",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 6,
+    "size": "3x3",
+    "stallNumber": "B5",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 7,
+    "size": "3x3",
+    "stallNumber": "B6",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 8,
+    "size": "3x3",
+    "stallNumber": "B7",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 9,
+    "size": "3x3",
+    "stallNumber": "B8",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 10,
+    "size": "3x3",
+    "stallNumber": "B9",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 11,
+    "size": "3x3",
+    "stallNumber": "B10",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 12,
+    "size": "3x3",
+    "stallNumber": "B11",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 13,
+    "size": "3x3",
+    "stallNumber": "B12",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 14,
+    "size": "3x3",
+    "stallNumber": "B13",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 15,
+    "size": "3x3",
+    "stallNumber": "B14",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 16,
+    "size": "3x3",
+    "stallNumber": "B15",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 17,
+    "size": "3x3",
+    "stallNumber": "B16",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 18,
+    "size": "3x3",
+    "stallNumber": "B17",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 19,
+    "size": "3x3",
+    "stallNumber": "B18",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 20,
+    "size": "3x3",
+    "stallNumber": "B19",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 21,
+    "size": "3x3",
+    "stallNumber": "B20",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 22,
+    "size": "3x3",
+    "stallNumber": "B21",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 23,
+    "size": "3x3",
+    "stallNumber": "B22",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 24,
+    "size": "3x3",
+    "stallNumber": "B23",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 25,
+    "size": "3x3",
+    "stallNumber": "B24",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 26,
+    "size": "3x3",
+    "stallNumber": "B25",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 27,
+    "size": "3x3",
+    "stallNumber": "B26",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 28,
+    "size": "3x3",
+    "stallNumber": "B27",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 29,
+    "size": "3x3",
+    "stallNumber": "B28",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 30,
+    "size": "3x3",
+    "stallNumber": "B29",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 31,
+    "size": "3x3",
+    "stallNumber": "B30",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 32,
+    "size": "3x3",
+    "stallNumber": "B31",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 33,
+    "size": "3x3",
+    "stallNumber": "B32",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 34,
+    "size": "3x3",
+    "stallNumber": "B33",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 35,
+    "size": "3x3",
+    "stallNumber": "B34",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 36,
+    "size": "3x3",
+    "stallNumber": "B35",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 37,
+    "size": "3x3",
+    "stallNumber": "B36",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 38,
+    "size": "3x3",
+    "stallNumber": "B37",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 39,
+    "size": "3x2",
+    "stallNumber": "C1",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 40,
+    "size": "3x2",
+    "stallNumber": "C2",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 41,
+    "size": "3x2",
+    "stallNumber": "C3",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 42,
+    "size": "3x2",
+    "stallNumber": "C4",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 43,
+    "size": "3x2",
+    "stallNumber": "C5",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 44,
+    "size": "3x2",
+    "stallNumber": "C6",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 45,
+    "size": "3x2",
+    "stallNumber": "C7",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 46,
+    "size": "3x2",
+    "stallNumber": "C8",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 47,
+    "size": "3x2",
+    "stallNumber": "C9",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 48,
+    "size": "3x2",
+    "stallNumber": "C10",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 49,
+    "size": "3x2",
+    "stallNumber": "C11",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 50,
+    "size": "3x2",
+    "stallNumber": "C12",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 51,
+    "size": "3x2",
+    "stallNumber": "C13",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 52,
+    "size": "3x2",
+    "stallNumber": "C14",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 53,
+    "size": "3x2",
+    "stallNumber": "C15",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 54,
+    "size": "3x2",
+    "stallNumber": "C16",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 55,
+    "size": "3x2",
+    "stallNumber": "C17",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 56,
+    "size": "3x2",
+    "stallNumber": "C18",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 57,
+    "size": "3x2",
+    "stallNumber": "C19",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 58,
+    "size": "3x2",
+    "stallNumber": "C20",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 59,
+    "size": "3x2",
+    "stallNumber": "C21",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 60,
+    "size": "3x2",
+    "stallNumber": "C22",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 61,
+    "size": "3x2",
+    "stallNumber": "C23",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 62,
+    "size": "3x2",
+    "stallNumber": "C24",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 63,
+    "size": "3x2",
+    "stallNumber": "C25",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 64,
+    "size": "3x2",
+    "stallNumber": "C26",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 65,
+    "size": "3x2",
+    "stallNumber": "C27",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 66,
+    "size": "3x2",
+    "stallNumber": "C28",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 67,
+    "size": "3x2",
+    "stallNumber": "C29",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 68,
+    "size": "3x2",
+    "stallNumber": "C30",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 69,
+    "size": "3x2",
+    "stallNumber": "C31",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 70,
+    "size": "3x2",
+    "stallNumber": "C32",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 71,
+    "size": "3x2",
+    "stallNumber": "C33",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 72,
+    "size": "3x2",
+    "stallNumber": "C34",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 73,
+    "size": "3x2",
+    "stallNumber": "C35",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 74,
+    "size": "3x2",
+    "stallNumber": "C36",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 75,
+    "size": "3x2",
+    "stallNumber": "C37",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 76,
+    "size": "3x2",
+    "stallNumber": "C38",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 77,
+    "size": "3x2",
+    "stallNumber": "C39",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 78,
+    "size": "3x2",
+    "stallNumber": "C40",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 79,
+    "size": "3x2",
+    "stallNumber": "C41",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 80,
+    "size": "3x2",
+    "stallNumber": "C42",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 81,
+    "size": "3x2",
+    "stallNumber": "C43",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 82,
+    "size": "3x2",
+    "stallNumber": "C44",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 83,
+    "size": "3x2",
+    "stallNumber": "C45",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 84,
+    "size": "3x2",
+    "stallNumber": "C46",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 85,
+    "size": "3x2",
+    "stallNumber": "C47",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 86,
+    "size": "3x2",
+    "stallNumber": "C48",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 87,
+    "size": "3x2",
+    "stallNumber": "C49",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 88,
+    "size": "2x2",
+    "stallNumber": "E1",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 89,
+    "size": "2x2",
+    "stallNumber": "E2",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 90,
+    "size": "2x2",
+    "stallNumber": "E3",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 91,
+    "size": "2x2",
+    "stallNumber": "E4",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 92,
+    "size": "2x2",
+    "stallNumber": "E5",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 93,
+    "size": "2x2",
+    "stallNumber": "E6",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 94,
+    "size": "2x2",
+    "stallNumber": "E7",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 95,
+    "size": "2x2",
+    "stallNumber": "E8",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 96,
+    "size": "2x2",
+    "stallNumber": "E9",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 97,
+    "size": "2x2",
+    "stallNumber": "E10",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 98,
+    "size": "2x2",
+    "stallNumber": "E11",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 99,
+    "size": "2x2",
+    "stallNumber": "E12",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 100,
+    "size": "2x2",
+    "stallNumber": "E13",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 101,
+    "size": "2x2",
+    "stallNumber": "E14",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 102,
+    "size": "2x2",
+    "stallNumber": "E15",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 103,
+    "size": "2x2",
+    "stallNumber": "E16",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 104,
+    "size": "2x2",
+    "stallNumber": "E17",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 105,
+    "size": "2x2",
+    "stallNumber": "E18",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 106,
+    "size": "2x2",
+    "stallNumber": "E19",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 107,
+    "size": "2x2",
+    "stallNumber": "E20",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 108,
+    "size": "2x2",
+    "stallNumber": "E21",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 109,
+    "size": "2x2",
+    "stallNumber": "E22",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 110,
+    "size": "2x2",
+    "stallNumber": "E23",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 111,
+    "size": "2x2",
+    "stallNumber": "E24",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 112,
+    "size": "2x2",
+    "stallNumber": "E25",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 113,
+    "size": "2x2",
+    "stallNumber": "E26",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 114,
+    "size": "2x2",
+    "stallNumber": "E27",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 115,
+    "size": "2x2",
+    "stallNumber": "E28",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 116,
+    "size": "2x2",
+    "stallNumber": "E29",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 117,
+    "size": "2x2",
+    "stallNumber": "E30",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 118,
+    "size": "2x2",
+    "stallNumber": "E31",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 119,
+    "size": "2x2",
+    "stallNumber": "E32",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 120,
+    "size": "2x2",
+    "stallNumber": "E33",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 121,
+    "size": "2x2",
+    "stallNumber": "E34",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 122,
+    "size": "2x2",
+    "stallNumber": "E35",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 123,
+    "size": "2x2",
+    "stallNumber": "E36",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 124,
+    "size": "2x2",
+    "stallNumber": "E37",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 125,
+    "size": "2x2",
+    "stallNumber": "E38",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 126,
+    "size": "2x2",
+    "stallNumber": "E39",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 127,
+    "size": "2x2",
+    "stallNumber": "E40",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 128,
+    "size": "2x2",
+    "stallNumber": "E41",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 129,
+    "size": "2x2",
+    "stallNumber": "E42",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 130,
+    "size": "2x2",
+    "stallNumber": "E43",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 131,
+    "size": "2x2",
+    "stallNumber": "E44",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 132,
+    "size": "2x2",
+    "stallNumber": "E45",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 133,
+    "size": "2x2",
+    "stallNumber": "E46",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 134,
+    "size": "2x2",
+    "stallNumber": "E47",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 135,
+    "size": "2x2",
+    "stallNumber": "E48",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 136,
+    "size": "2x2",
+    "stallNumber": "E49",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 137,
+    "size": "2x2",
+    "stallNumber": "E50",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 138,
+    "size": "2x2",
+    "stallNumber": "E51",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 139,
+    "size": "2x2",
+    "stallNumber": "E52",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 140,
+    "size": "2x2",
+    "stallNumber": "E53",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 141,
+    "size": "2x2",
+    "stallNumber": "E54",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 142,
+    "size": "2x2",
+    "stallNumber": "E55",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 143,
+    "size": "2x2",
+    "stallNumber": "E56",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 144,
+    "size": "2x2",
+    "stallNumber": "E57",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 145,
+    "size": "2x2",
+    "stallNumber": "E58",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 146,
+    "size": "2x2",
+    "stallNumber": "E59",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 147,
+    "size": "2x2",
+    "stallNumber": "E60",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 148,
+    "size": "2x2",
+    "stallNumber": "E61",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 149,
+    "size": "2x2",
+    "stallNumber": "E62",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 150,
+    "size": "2x2",
+    "stallNumber": "E63",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 151,
+    "size": "2x2",
+    "stallNumber": "E64",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 152,
+    "size": "2x2",
+    "stallNumber": "E65",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 153,
+    "size": "2x2",
+    "stallNumber": "E66",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 154,
+    "size": "2x2",
+    "stallNumber": "E67",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 155,
+    "size": "2x2",
+    "stallNumber": "E68",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 156,
+    "size": "2x2",
+    "stallNumber": "E69",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 157,
+    "size": "2x2",
+    "stallNumber": "E70",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 158,
+    "size": "2x2",
+    "stallNumber": "E71",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 159,
+    "size": "2x2",
+    "stallNumber": "E72",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 160,
+    "size": "2x2",
+    "stallNumber": "E73",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 161,
+    "size": "2x2",
+    "stallNumber": "E74",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 162,
+    "size": "2x2",
+    "stallNumber": "E75",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 163,
+    "size": "2x2",
+    "stallNumber": "E76",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 164,
+    "size": "2x2",
+    "stallNumber": "E77",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 165,
+    "size": "2x2",
+    "stallNumber": "E78",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 166,
+    "size": "2x2",
+    "stallNumber": "E79",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 167,
+    "size": "2x2",
+    "stallNumber": "E80",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 168,
+    "size": "2x2",
+    "stallNumber": "E81",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 169,
+    "size": "2x2",
+    "stallNumber": "E82",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 170,
+    "size": "2x2",
+    "stallNumber": "E83",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 171,
+    "size": "2x2",
+    "stallNumber": "E84",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 172,
+    "size": "2x2",
+    "stallNumber": "E85",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 173,
+    "size": "2x2",
+    "stallNumber": "E86",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 174,
+    "size": "2x2",
+    "stallNumber": "E87",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 175,
+    "size": "2x2",
+    "stallNumber": "E88",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 176,
+    "size": "2x2",
+    "stallNumber": "E89",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 177,
+    "size": "2x2",
+    "stallNumber": "E90",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 178,
+    "size": "2x2",
+    "stallNumber": "E91",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 179,
+    "size": "2x2",
+    "stallNumber": "E92",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 180,
+    "size": "2x2",
+    "stallNumber": "E93",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 181,
+    "size": "2x2",
+    "stallNumber": "E94",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 182,
+    "size": "2x2",
+    "stallNumber": "E95",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 183,
+    "size": "2x2",
+    "stallNumber": "E96",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 184,
+    "size": "2x2",
+    "stallNumber": "E97",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 185,
+    "size": "2x2",
+    "stallNumber": "E98",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 186,
+    "size": "2x2",
+    "stallNumber": "E99",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  },
+  {
+    "sourceRow": 187,
+    "size": "2x2",
+    "stallNumber": "E100",
+    "blocked": false,
+    "paymentReceived": false,
+    "allotted": false,
+    "exhibitorBookingNumber": null
+  }
+]

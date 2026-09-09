@@ -1,0 +1,25 @@
+@host = https://localhost:7001
+@eventId = 22222222-2222-4222-8222-222222222222
+@bookingId = 77777777-7777-4777-8777-000000000001
+@stallId = stall-000000000000000000-000000000002
+@tenantId = 11111111-1111-4111-8111-111111111111
+@actorUserId = 44444444-4444-4444-8444-000000000002
+
+### Block stall
+POST {{host}}/api/v1/admin/events/{{eventId}}/bookings/{{bookingId}}/block-stall
+Content-Type: application/json
+
+{
+  "tenantId": "{{tenantId}}",
+  "stallId": "{{stallId}}",
+  "actorUserId": "{{actorUserId}}"
+}
+
+### Generate proforma invoice
+POST {{host}}/api/v1/admin/events/{{eventId}}/bookings/{{bookingId}}/proforma-invoice/generate
+Content-Type: application/json
+
+{
+  "tenantId": "{{tenantId}}",
+  "actorUserId": "{{actorUserId}}"
+}

@@ -1,0 +1,40 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { buyerRepository } from './buyerRepository'; import { buyerKeys } from './queryKeys';
+export const useBuyerSession=(enabled:boolean=true)=>useQuery({queryKey:buyerKeys.session,queryFn:buyerRepository.getSession,staleTime:5*60_000,enabled});
+export const useBuyerOrganisation=()=>useQuery({queryKey:buyerKeys.organisation,queryFn:buyerRepository.getOrganisation});
+export const useBuyerContact=()=>useQuery({queryKey:buyerKeys.contact,queryFn:buyerRepository.getContact});
+export function useCreateRequirement(){const qc=useQueryClient();return useMutation({mutationFn:buyerRepository.createRequirement,onSuccess:()=>qc.invalidateQueries({queryKey:buyerKeys.requirements})});}
+export function useCreateEngagement(){return useMutation({mutationFn:buyerRepository.createEngagement});}
+export const useBuyerContacts=()=>useQuery({queryKey:buyerKeys.contacts,queryFn:buyerRepository.listContacts});
+export function useCreateContact(){const qc=useQueryClient();return useMutation({mutationFn:buyerRepository.createContact,onSuccess:()=>qc.invalidateQueries({queryKey:buyerKeys.contacts})});}
+export function useDeleteContact(){const qc=useQueryClient();return useMutation({mutationFn:buyerRepository.deleteContact,onSuccess:()=>qc.invalidateQueries({queryKey:buyerKeys.contacts})});}
+
+export const useEngagements=()=>useQuery({queryKey:buyerKeys.engagements,queryFn:buyerRepository.listEngagements});
+export const useEngagementMessages=(engagementId:string)=>useQuery({queryKey:buyerKeys.engagementMessages(engagementId),queryFn:()=>buyerRepository.listEngagementMessages(engagementId),enabled:Boolean(engagementId)});
+export function useSendEngagementMessage(){const qc=useQueryClient();return useMutation({mutationFn:({engagementId,...payload}:{engagementId:string;senderOrganizationId:string;message:string})=>buyerRepository.sendEngagementMessage(engagementId,payload),onSuccess:(_,vars)=>qc.invalidateQueries({queryKey:buyerKeys.engagementMessages(vars.engagementId)})});}
+export function useCreateRfq(){const qc=useQueryClient();return useMutation({mutationFn:buyerRepository.createRfq,onSuccess:()=>qc.invalidateQueries({queryKey:buyerKeys.rfqs})});}
+export const useRequirements=()=>useQuery({queryKey:buyerKeys.requirements,queryFn:buyerRepository.listRequirements});
+export const useRequirement=(id:string)=>useQuery({queryKey:buyerKeys.requirement(id),queryFn:()=>buyerRepository.getRequirement(id),enabled:Boolean(id)});
+export const useRequirementMatches=(id:string)=>useQuery({queryKey:buyerKeys.matches(id),queryFn:()=>buyerRepository.listMatches(id),enabled:Boolean(id)});
+export const useSupplier=(id:string)=>useQuery({queryKey:buyerKeys.supplier(id),queryFn:()=>buyerRepository.getSupplier(id),enabled:Boolean(id)});
+export const useMeetings=()=>useQuery({queryKey:buyerKeys.meetings,queryFn:buyerRepository.listMeetings});
+export const useMeeting=(id:string)=>useQuery({queryKey:buyerKeys.meeting(id),queryFn:()=>buyerRepository.getMeeting(id),enabled:Boolean(id)});
+export const useMeetingOutcomes=()=>useQuery({queryKey:buyerKeys.meetingOutcomes,queryFn:buyerRepository.listMeetingOutcomes});
+export function useScheduleMeeting(){const qc=useQueryClient();return useMutation({mutationFn:buyerRepository.scheduleMeeting,onSuccess:()=>qc.invalidateQueries({queryKey:buyerKeys.meetings})});}
+export function useTransitionMeeting(){const qc=useQueryClient();return useMutation({mutationFn:({id,status,notes}:{id:string;status:string;notes?:string})=>buyerRepository.transitionMeeting(id,status,notes),onSuccess:x=>{qc.setQueryData(buyerKeys.meeting(x.id),x);qc.invalidateQueries({queryKey:buyerKeys.meetings});}});}
+export function useMeetingOutcome(){const qc=useQueryClient();return useMutation({mutationFn:({id,...payload}:{id:string;outcome:string;notes:string;actionItems?:{title:string;ownerUserId?:string;dueDate?:string}[]})=>buyerRepository.meetingOutcome(id,payload),onSuccess:x=>{qc.setQueryData(buyerKeys.meeting(x.meeting.id),x.meeting);qc.invalidateQueries({queryKey:buyerKeys.meetings});qc.invalidateQueries({queryKey:buyerKeys.actions});}});}
+export const useActions=()=>useQuery({queryKey:buyerKeys.actions,queryFn:buyerRepository.listActions});
+export const useRfqs=()=>useQuery({queryKey:buyerKeys.rfqs,queryFn:buyerRepository.listRfqs});
+export const useSamples=()=>useQuery({queryKey:buyerKeys.samples,queryFn:buyerRepository.listSamples});
+export const useQualifications=()=>useQuery({queryKey:buyerKeys.qualifications,queryFn:buyerRepository.listQualifications});
+export const useEvaluations=()=>useQuery({queryKey:buyerKeys.evaluations,queryFn:buyerRepository.listEvaluations});
+export const useOnboarding=()=>useQuery({queryKey:buyerKeys.onboarding,queryFn:buyerRepository.listOnboarding});
+export const useAudits=()=>useQuery({queryKey:buyerKeys.audits,queryFn:buyerRepository.listAudits});
+export const useNegotiations=()=>useQuery({queryKey:buyerKeys.negotiations,queryFn:buyerRepository.listNegotiations});
+export const usePurchaseOrders=()=>useQuery({queryKey:buyerKeys.purchaseOrders,queryFn:buyerRepository.listPurchaseOrders});
+export const useNotifications=()=>useQuery({queryKey:buyerKeys.notifications,queryFn:buyerRepository.listNotifications,staleTime:30_000});
+export const useReports=()=>useQuery({queryKey:buyerKeys.reports,queryFn:buyerRepository.listReports});
+export function useSaveDraft(resource:string, invalidateKey?:readonly unknown[]){const qc=useQueryClient(); return useMutation({mutationFn:(input:{payload:unknown;version?:number})=>buyerRepository.saveDraft(resource,input.payload,input.version),onSuccess:async()=>{if(invalidateKey) await qc.invalidateQueries({queryKey:invalidateKey}); if(resource.startsWith('requirements')||resource.startsWith('/requirements')){const id=resource.replace(/^\/?requirements\//,'').split('/')[0]; await qc.invalidateQueries({queryKey:buyerKeys.requirements}); if(id&&id!=='new'&&!id.startsWith('req-')){await qc.invalidateQueries({queryKey:buyerKeys.requirement(id)}); await qc.invalidateQueries({queryKey:buyerKeys.matches(id)});} await qc.invalidateQueries({queryKey:buyerKeys.reports});} else if(resource==='organisation'){await qc.invalidateQueries({queryKey:buyerKeys.organisation}); await qc.invalidateQueries({queryKey:buyerKeys.session});} else if(resource==='contacts'){await qc.invalidateQueries({queryKey:buyerKeys.contacts}); await qc.invalidateQueries({queryKey:buyerKeys.contact});}}});}
+export function useUpdateRequirement(){const qc=useQueryClient(); return useMutation({mutationFn:(input:{id:string;payload:unknown;version?:number})=>buyerRepository.updateRequirement(input.id,input.payload,input.version),onSuccess:async(_,vars)=>{await qc.invalidateQueries({queryKey:buyerKeys.requirements}); if(vars.id&&vars.id!=='new'&&!vars.id.startsWith('req-')){await qc.invalidateQueries({queryKey:buyerKeys.requirement(vars.id)}); await qc.invalidateQueries({queryKey:buyerKeys.matches(vars.id)});} await qc.invalidateQueries({queryKey:buyerKeys.reports});}});}
+export function useSubmit(resource:string){const qc=useQueryClient(); return useMutation({mutationFn:(payload:unknown)=>buyerRepository.submit(resource,payload),onSuccess:async(res)=>{const id=resource.replace(/^\/?requirements\//,'').split('/')[0]||res?.id; await qc.invalidateQueries({queryKey:buyerKeys.requirements}); if(id&&id!=='new'&&!id.startsWith('req-')){await qc.invalidateQueries({queryKey:buyerKeys.requirement(id)}); await qc.invalidateQueries({queryKey:buyerKeys.matches(id)});} await qc.invalidateQueries({queryKey:buyerKeys.reports});}});}
+export function useChangePassword(){return useMutation({mutationFn:({currentPassword,newPassword}:{currentPassword:string;newPassword:string})=>buyerRepository.changePassword(currentPassword,newPassword)});}

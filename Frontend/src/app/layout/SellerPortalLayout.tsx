@@ -1,0 +1,2 @@
+import { Outlet } from 'react-router-dom'; import { BrandHeader } from '../../components/navigation/BrandHeader'; import { SellerSidebar } from '../../components/navigation/SellerSidebar';
+export function SellerPortalLayout(){return <div className="min-h-screen bg-slate-50"><BrandHeader title="Seller Portal" subtitle="Publish capabilities, engage buyers and convert opportunities"/><div className="lg:flex"><SellerSidebar/><main className="min-w-0 flex-1 p-4 md:p-6 xl:p-7"><div className="mx-auto max-w-7xl"><Outlet/></div></main></div></div>}

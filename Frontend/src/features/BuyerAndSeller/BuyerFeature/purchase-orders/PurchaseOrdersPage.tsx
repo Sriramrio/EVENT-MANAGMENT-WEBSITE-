@@ -1,0 +1,12 @@
+// import { usePurchaseOrders } from '@/services/buyer/hooks'; 
+
+import { Column, DataTable } from "../../../../components/data-display/DataTable";
+import { ErrorState, LoadingState } from "../../../../components/ui/PageStates";
+import { StatusBadge } from "../../../../components/ui/StatusBadge";
+import { PurchaseOrder } from "../../../../domain/models/buyer";
+import { usePurchaseOrders } from "../../../../services/buyer/hooks";
+import { ScreenShell } from "../shared/ScreenShell";
+import { RefreshListButton } from "../../../../shared/components/RefreshListButton";
+
+const money=(m:PurchaseOrder['value'])=>new Intl.NumberFormat('en-IN',{style:'currency',currency:m.currency,maximumFractionDigits:0}).format(m.amount);
+export default function PurchaseOrdersPage(){const q=usePurchaseOrders();if(q.isLoading)return <LoadingState/>;if(q.isError)return <ErrorState error={q.error}/>;const cols:Column<PurchaseOrder>[]=[{key:'po',header:'PO No.',cell:r=><b className="text-brand-600">{r.code}</b>},{key:'sup',header:'Supplier',cell:r=>r.supplier},{key:'req',header:'Requirement',cell:r=>r.requirement},{key:'date',header:'PO Date',cell:r=>r.poDate},{key:'value',header:'Value',cell:r=><b>{money(r.value)}</b>},{key:'status',header:'Status',cell:r=><StatusBadge status={r.status}/>},{key:'receipt',header:'Receipt',cell:r=><StatusBadge status={r.receiptState}/>},{key:'source',header:'Source',cell:r=>r.sourceSystem}];const total=(q.data??[]).reduce((a,b)=>a+b.value.amount,0);return <ScreenShell screen={29} title="Purchase Orders" subtitle="Track purchase orders placed and externally synchronized procurement records." actions={<RefreshListButton onRefresh={() => q.refetch()} />}><DataTable rows={q.data??[]} columns={cols} caption="Purchase-order register"/><div className="mt-4 grid gap-3 sm:grid-cols-4">{[['Total PO Value',new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',notation:'compact'}).format(total)],['Total Orders',q.data?.length??0],['Partially Received',q.data?.filter(x=>x.receiptState.includes('Partially')).length??0],['On-time Delivery','95%']].map(([l,v])=><div className="card p-4" key={String(l)}><div className="text-xl font-extrabold">{v}</div><div className="text-[10px] font-bold text-slate-500">{l}</div></div>)}</div><div className="mt-4 rounded-xl bg-blue-50 p-3 text-xs text-blue-800">The portal distinguishes PO tracking from PO system-of-record ownership. These mock records are marked as External ERP.</div></ScreenShell>;}

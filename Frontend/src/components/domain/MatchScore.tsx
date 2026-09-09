@@ -1,0 +1,1 @@
+export function MatchScore({score,size='md'}:{score:number;size?:'sm'|'md'|'lg'}){const cls=size==='lg'?'text-3xl':size==='sm'?'text-sm':'text-xl';return <span className={`font-extrabold text-emerald-600 ${cls}`}>{score}%</span>;}

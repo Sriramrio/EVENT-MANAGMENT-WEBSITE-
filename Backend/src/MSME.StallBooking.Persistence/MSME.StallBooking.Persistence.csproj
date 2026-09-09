@@ -1,0 +1,26 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>net8.0</TargetFramework>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+	</PropertyGroup>
+	
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.11" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.11">
+			<PrivateAssets>all</PrivateAssets>
+		</PackageReference>
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="8.0.11" />
+		<PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.11" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="../MSME.StallBooking.Application/MSME.StallBooking.Application.csproj" />
+		<ProjectReference Include="../MSME.StallBooking.Domain/MSME.StallBooking.Domain.csproj" />
+	</ItemGroup>
+	<ItemGroup>
+		<EmbeddedResource Include="../../docs/marketplace_reference_seed.sql" LogicalName="MSME.StallBooking.Persistence.marketplace_reference_seed.sql" />
+	</ItemGroup>
+</Project>
