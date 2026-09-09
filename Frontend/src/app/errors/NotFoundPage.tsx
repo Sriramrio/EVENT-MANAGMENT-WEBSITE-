@@ -1342,7 +1342,7 @@ export function NotFoundPage(): React.JSX.Element {
                       PREMIUM VENUE
                     </div>
                     <div className="text-lg font-extrabold text-slate-900">
-                      Hotel Hills, Hosur, TN
+                      Hotel Hills, Hosur Tamil Nadu, TN
                     </div>
                   </div>
                 </div>
