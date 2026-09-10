@@ -17,33 +17,9 @@ using MSME.StallBooking.Persistence;
 using MSME.StallBooking.Persistence.Repositories;
 using QuestPDF.Infrastructure;
 using System.Text;
-using Microsoft.AspNetCore.ResponseCompression;
 using static MSME.StallBooking.Application.Services.PaymentWorkflowService;
 
 var builder = WebApplication.CreateBuilder(args);
-
-builder.Services.AddResponseCompression(options =>
-{
-    options.EnableForHttps = true;
-    options.Providers.Add<BrotliCompressionProvider>();
-    options.Providers.Add<GzipCompressionProvider>();
-    options.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(new[]
-    {
-        "application/json",
-        "application/javascript",
-        "text/css",
-        "text/plain",
-        "image/svg+xml"
-    });
-});
-builder.Services.Configure<BrotliCompressionProviderOptions>(options =>
-{
-    options.Level = System.IO.Compression.CompressionLevel.Fastest;
-});
-builder.Services.Configure<GzipCompressionProviderOptions>(options =>
-{
-    options.Level = System.IO.Compression.CompressionLevel.Fastest;
-});
 
 builder.Services.AddControllers().AddJsonOptions(options =>
 {
@@ -108,7 +84,6 @@ QuestPDF.Settings.License = LicenseType.Community;
 var app = builder.Build();
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
-app.UseResponseCompression();
 app.UseSwagger();
 app.UseSwaggerUI();
 app.UseHttpsRedirection();

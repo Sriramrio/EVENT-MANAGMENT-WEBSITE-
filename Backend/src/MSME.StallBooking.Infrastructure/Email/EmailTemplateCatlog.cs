@@ -47,10 +47,10 @@ public static class EmailTemplateCatalog
             TemplateCode = "EXHIBITOR_DIRECT_EMAIL",
             Name = "Exhibitor Direct Message / Invitation",
             Description = "Sent by exhibitors directly to visitors or business partners with reply-to set to the exhibitor.",
-            DefaultSubject = "Connect & Meet with {{companyName}} - MSME Sangamam 2026",
+            DefaultSubject = "Connect & Meet with {{companyName}} - MSME Sangamam Connect - Hosur 2026",
             DefaultHtmlBody = @"<div style=""font-family:'Segoe UI', Arial, sans-serif; font-size:15px; color:#1e293b; line-height:1.6; max-width:640px; margin:0 auto; border:1px solid #e2e8f0; border-radius:12px; overflow:hidden; background-color:#ffffff;"">
     <div style=""background: linear-gradient(135deg, #0B3B75 0%, #1e40af 100%); padding:22px 28px; text-align:left; color:#ffffff;"">
-        <h2 style=""margin:0; font-size:19px; font-weight:700; color:#ffffff;"">MSME Sangamam 2026</h2>
+        <h2 style=""margin:0; font-size:19px; font-weight:700; color:#ffffff;"">MSME Sangamam Connect - Hosur 2026</h2>
         <p style=""margin:4px 0 0 0; font-size:13px; color:#e2e8f0;"">Hosur | Business & Industrial Expo</p>
     </div>
     <div style=""padding:28px;"">
@@ -534,10 +534,10 @@ public static class EmailTemplateCatalog
             TemplateCode = "STALL_CARD_EMAIL",
             Name = "Stall Details Card Email",
             Description = "Sent with attached stall details card containing logo, fascia name, venue, and product description.",
-            DefaultSubject = "MSME Sangamam Stall Details Card - Registration No. {{bookingRegistrationNumber}}",
+            DefaultSubject = "MSME Sangamam Connect - Hosur 2026 - Stall Details Card - Registration No. {{bookingRegistrationNumber}}",
             DefaultHtmlBody = @"<div style=""font-family:Arial, sans-serif; font-size:14px; color:#222; line-height:1.6;"">
     <p>Dear Exhibitor,</p>
-    <p>Greetings from <b>MSME Sangamam Connect - Tamil Nadu</b>.</p>
+    <p>Greetings from <b>MSME Sangamam Connect - Hosur 2026</b>.</p>
     <p>Your stall details card has been generated successfully for the following booking. Please find the stall details card attached to this email.</p>
 
     <h3 style=""margin-top:20px;"">Stall Allocation Details</h3>
@@ -581,7 +581,7 @@ public static class EmailTemplateCatalog
 
     <p style=""margin-top:20px;"">
         Regards,<br/>
-        <b>MSME Sangamam Connect - Tamil Nadu Organising Team</b>
+        <b>MSME Sangamam Connect - Hosur 2026 Organising Team</b>
     </p>
 </div>",
             Placeholders = new List<TemplatePlaceholderInfo>

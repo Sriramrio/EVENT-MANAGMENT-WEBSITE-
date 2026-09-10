@@ -148,6 +148,7 @@ import { ExhibitorInterestsPage } from "../features/ExhibitorPortal/ExhibitorInt
 import { ExhibitorStallQrPage } from "../features/ExhibitorPortal/ExhibitorStallQrPage";
 import { ExhibitorECardPage } from "../features/ExhibitorPortal/ExhibitorECardPage";
 import { ExhibitorSendEmailPage } from "../features/ExhibitorPortal/ExhibitorSendEmailPage";
+import { ExhibitorEmailLogsPage } from "../features/ExhibitorPortal/ExhibitorEmailLogsPage";
 import { VisitorAuthGuard } from "./guards/VisitorAuthGuard";
 import VisitorPassPage from "../features/public/VisitorPassPage";
 import { VisitorScannerPage } from "../features/public/VisitorScannerPage";
@@ -1219,6 +1220,8 @@ export const router = createBrowserRouter([
           { path: "ecard", element: <ExhibitorECardPage /> },
           { path: "SendEmail", element: <ExhibitorSendEmailPage /> },
           { path: "send-email", element: <ExhibitorSendEmailPage /> },
+          { path: "EmailLogs", element: <ExhibitorEmailLogsPage /> },
+          { path: "email-logs", element: <ExhibitorEmailLogsPage /> },
           { path: "Profile", element: <ExhibitorProfilePage /> },
         ],
       },

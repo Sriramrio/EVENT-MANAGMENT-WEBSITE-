@@ -34,6 +34,7 @@ import { appConfig } from '../../config/appConfig';
 import { StallSizeOption } from '../stalls/StallMasterPage';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { RefreshListButton } from '../../shared/components/RefreshListButton';
+import { ModalPortal } from '../../shared/components/ModalPortal';
 
 const BOOKINGS_KEY = ['admin', 'bookings'] as const;
 const STALLS_KEY = ['admin', 'stalls'] as const;
@@ -1310,10 +1311,11 @@ function getEffectiveStallStatus(
 
       {/* Action Drawer Modal */}
       {actionButtonModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4"
-          onClick={() => setActionButtonModal(null)}
-        >
+        <ModalPortal>
+          <div
+            className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+            onClick={() => setActionButtonModal(null)}
+          >
           <div
             className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl"
             onClick={(e) => e.stopPropagation()}
@@ -1438,14 +1440,16 @@ function getEffectiveStallStatus(
             </div>
           </div>
         </div>
+        </ModalPortal>
       )}
 
       {/* Detail View Modal */}
       {viewBooking && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4"
-          onClick={() => setViewBooking(null)}
-        >
+        <ModalPortal>
+          <div
+            className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+            onClick={() => setViewBooking(null)}
+          >
           <div
             className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-xl bg-white p-6 shadow-xl"
             onClick={(e) => e.stopPropagation()}
@@ -1494,6 +1498,7 @@ function getEffectiveStallStatus(
             </div>
           </div>
         </div>
+        </ModalPortal>
       )}
 
       {/* E-Card Modal Integration */}

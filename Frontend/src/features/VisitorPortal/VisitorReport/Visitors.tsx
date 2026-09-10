@@ -17,6 +17,7 @@ import {
     AlertCircle
 } from 'lucide-react';
 import { apiClient } from '../../../data/api/apiClient';
+import { ModalPortal } from '../../../shared/components/ModalPortal';
 
 interface VisitorListProps {
     tenantId: string;
@@ -452,177 +453,174 @@ export const VisitorList: React.FC<VisitorListProps> = ({ tenantId, eventId }) =
 
             {/* Send Warm-up Invite Modal */}
             {isInviteModalOpen && (
-                <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
-                    <div className="bg-white rounded-xl shadow-xl border border-slate-200 w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-                        <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
-                            <div>
-                                <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                                    <Calendar className="w-4 h-4 text-indigo-600" />
-                                    {inviteTargetVisitor ? 'Send Single Invitation' : 'Send Bulk Warm-up Broadcast'}
-                                </h2>
-                                <p className="text-[11px] text-slate-500 mt-0.5">
-                                    {inviteTargetVisitor
-                                        ? `Recipient: ${inviteTargetVisitor.contactPersonName || inviteTargetVisitor.legalName}`
-                                        : `Targeting all ${visitors.length} registered visitors`}
-                                </p>
-                            </div>
-                            <button onClick={() => setIsInviteModalOpen(false)} className="p-1 text-slate-400 hover:text-slate-600 rounded-lg">
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                        <div className="p-5 space-y-4 text-xs">
-                            {inviteSuccessMsg ? (
-                                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-center font-medium flex flex-col items-center gap-2">
-                                    <CheckCircle2 className="w-6 h-6 text-emerald-600" />
-                                    {inviteSuccessMsg}
+                <ModalPortal>
+                    <div className="fixed inset-0 z-[99999] bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
+                        <div className="bg-white rounded-xl shadow-xl border border-slate-200 w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+                            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+                                <div>
+                                    <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                                        <Calendar className="w-4 h-4 text-indigo-600" />
+                                        {inviteTargetVisitor ? 'Send Single Invitation' : 'Send Bulk Warm-up Broadcast'}
+                                    </h2>
+                                    <p className="text-[11px] text-slate-500 mt-0.5">
+                                        {inviteTargetVisitor
+                                            ? `Recipient: ${inviteTargetVisitor.contactPersonName || inviteTargetVisitor.legalName}`
+                                            : `Targeting all ${visitors.length} registered visitors`}
+                                    </p>
                                 </div>
-                            ) : (
-                                <>
-                                    <div className="space-y-1.5">
-                                        <label className="font-semibold text-slate-700">Event Warm-up Timing</label>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <button
-                                                type="button"
-                                                onClick={() => setCountdownType(WarmupCountdownType.DaysToGo)}
-                                                className={`p-2.5 rounded-lg border text-left font-medium transition-all ${
-                                                    countdownType === WarmupCountdownType.DaysToGo
-                                                        ? 'bg-indigo-50 border-indigo-500 text-indigo-700'
-                                                        : 'border-slate-200 hover:bg-slate-50 text-slate-600'
-                                                }`}
-                                            >
-                                                Days To Go
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => setCountdownType(WarmupCountdownType.Today)}
-                                                className={`p-2.5 rounded-lg border text-left font-medium transition-all ${
-                                                    countdownType === WarmupCountdownType.Today
-                                                        ? 'bg-indigo-50 border-indigo-500 text-indigo-700'
-                                                        : 'border-slate-200 hover:bg-slate-50 text-slate-600'
-                                                }`}
-                                            >
-                                                Event is Today 🎉
-                                            </button>
-                                        </div>
-                                    </div>
+                                <button onClick={() => setIsInviteModalOpen(false)} className="p-1 text-slate-400 hover:text-slate-600 rounded-lg cursor-pointer">
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
 
-                                    {countdownType === WarmupCountdownType.DaysToGo && (
+                            <div className="p-5 space-y-4 text-xs">
+                                {inviteSuccessMsg ? (
+                                    <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-center font-medium flex flex-col items-center gap-2">
+                                        <CheckCircle2 className="w-6 h-6 text-emerald-600" />
+                                        {inviteSuccessMsg}
+                                    </div>
+                                ) : (
+                                    <>
                                         <div className="space-y-1.5">
-                                            <label className="font-semibold text-slate-700">Days Remaining</label>
-                                            <input
-                                                type="number"
-                                                min="1"
-                                                max="60"
-                                                value={daysRemaining}
-                                                onChange={(e) => setDaysRemaining(parseInt(e.target.value) || 1)}
-                                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500"
-                                                placeholder="e.g. 10"
+                                            <label className="font-semibold text-slate-700">Event Warm-up Timing</label>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setCountdownType(WarmupCountdownType.DaysToGo)}
+                                                    className={`p-2.5 rounded-lg border text-left font-medium transition-all ${
+                                                        countdownType === WarmupCountdownType.DaysToGo
+                                                            ? 'bg-indigo-50 border-indigo-500 text-indigo-700'
+                                                            : 'border-slate-200 hover:bg-slate-50 text-slate-600'
+                                                    }`}
+                                                >
+                                                    Days To Go
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setCountdownType(WarmupCountdownType.Today)}
+                                                    className={`p-2.5 rounded-lg border text-left font-medium transition-all ${
+                                                        countdownType === WarmupCountdownType.Today
+                                                            ? 'bg-indigo-50 border-indigo-500 text-indigo-700'
+                                                            : 'border-slate-200 hover:bg-slate-50 text-slate-600'
+                                                    }`}
+                                                >
+                                                    Event is Today 🎉
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {countdownType === WarmupCountdownType.DaysToGo && (
+                                            <div className="space-y-1.5">
+                                                <label className="font-semibold text-slate-700">Days Remaining</label>
+                                                <input
+                                                    type="number"
+                                                    min="1"
+                                                    max="60"
+                                                    value={daysRemaining}
+                                                    onChange={(e) => setDaysRemaining(parseInt(e.target.value) || 1)}
+                                                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500"
+                                                    placeholder="e.g. 10"
+                                                />
+                                            </div>
+                                        )}
+
+                                        <div className="space-y-1.5">
+                                            <label className="font-semibold text-slate-700">Additional Announcement (Optional)</label>
+                                            <textarea
+                                                rows={3}
+                                                value={customMessage}
+                                                onChange={(e) => setCustomMessage(e.target.value)}
+                                                placeholder="e.g. Gates open at 9 AM. Free parking available at Gate 2."
+                                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 text-slate-700"
                                             />
                                         </div>
-                                    )}
+                                    </>
+                                )}
+                            </div>
 
-                                    <div className="space-y-1.5">
-                                        <label className="font-semibold text-slate-700">Additional Announcement (Optional)</label>
-                                        <textarea
-                                            rows={3}
-                                            value={customMessage}
-                                            onChange={(e) => setCustomMessage(e.target.value)}
-                                            placeholder="e.g. Gates open at 9 AM. Free parking available at Gate 2."
-                                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 text-slate-700"
-                                        />
-                                    </div>
-                                </>
+                            {!inviteSuccessMsg && (
+                                <div className="px-5 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsInviteModalOpen(false)}
+                                        className="px-4 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 cursor-pointer"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={handleSendInvite}
+                                        disabled={sendingInvite}
+                                        className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 shadow-sm disabled:opacity-50 cursor-pointer"
+                                    >
+                                        <Send className={`w-3.5 h-3.5 ${sendingInvite ? 'animate-spin' : ''}`} />
+                                        {sendingInvite ? 'Sending...' : 'Dispatch Invitations'}
+                                    </button>
+                                </div>
                             )}
                         </div>
-
-                        {!inviteSuccessMsg && (
-                            <div className="px-5 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-2">
-                                <button
-                                    type="button"
-                                    onClick={() => setIsInviteModalOpen(false)}
-                                    className="px-4 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-100"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={handleSendInvite}
-                                    disabled={sendingInvite}
-                                    className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 shadow-sm disabled:opacity-50"
-                                >
-                                    <Send className={`w-3.5 h-3.5 ${sendingInvite ? 'animate-spin' : ''}`} />
-                                    {sendingInvite ? 'Sending...' : 'Dispatch Invitations'}
-                                </button>
-                            </div>
-                        )}
                     </div>
-                </div>
+                </ModalPortal>
             )}
 
             {/* Visitor Detail Modal */}
             {selectedVisitor && (
-                <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
-                    <div className="bg-white rounded-xl shadow-xl border border-slate-200 w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-                        <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
-                            <div>
-                                <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
-                                    {selectedVisitor.registrationNumber}
-                                </span>
-                                <h2 className="text-base font-bold text-slate-900 mt-1">{selectedVisitor.legalName}</h2>
-                            </div>
-                            <button onClick={() => setSelectedVisitor(null)} className="p-1 text-slate-400 hover:text-slate-600 rounded-lg">
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                        <div className="p-5 space-y-4 text-xs text-slate-600">
-                            <div className="grid grid-cols-2 gap-3 bg-slate-50 p-3 rounded-lg border border-slate-100">
+                <ModalPortal>
+                    <div className="fixed inset-0 z-[99999] bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
+                        <div className="bg-white rounded-xl shadow-xl border border-slate-200 w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+                            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
                                 <div>
-                                    <p className="text-slate-400 text-[10px] uppercase">Contact Person</p>
-                                    <p className="font-semibold text-slate-800 mt-0.5">{selectedVisitor.contactPersonName}</p>
-                                    {selectedVisitor.contactPersonDesignation && (
-                                        <p className="text-slate-500">{selectedVisitor.contactPersonDesignation}</p>
-                                    )}
+                                    <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
+                                        {selectedVisitor.registrationNumber}
+                                    </span>
+                                    <h2 className="text-base font-bold text-slate-900 mt-1">{selectedVisitor.legalName}</h2>
                                 </div>
-                                <div>
-                                    <p className="text-slate-400 text-[10px] uppercase">Mobile Number</p>
-                                    <p className="font-mono font-semibold text-slate-800 mt-0.5">{selectedVisitor.mobile}</p>
-                                </div>
+                                <button onClick={() => setSelectedVisitor(null)} className="p-1 text-slate-400 hover:text-slate-600 rounded-lg cursor-pointer">
+                                    <X className="w-5 h-5" />
+                                </button>
                             </div>
 
-                            <div className="space-y-2">
-                                <div className="flex items-center gap-2">
-                                    <Building2 className="w-4 h-4 text-slate-400" />
-                                    <span><strong>Industry:</strong> {selectedVisitor.industryCategory || 'N/A'}</span>
-                                </div>
-                                {selectedVisitor.email && (
-                                    <div className="flex items-center gap-2">
-                                        <Phone className="w-4 h-4 text-slate-400" />
-                                        <span><strong>Email:</strong> {selectedVisitor.email}</span>
+                            <div className="p-5 space-y-4 text-xs text-slate-600">
+                                <div className="grid grid-cols-2 gap-3 bg-slate-50 p-3 rounded-lg border border-slate-100">
+                                    <div>
+                                        <span className="text-[10px] text-slate-400 uppercase font-medium">Contact Person</span>
+                                        <p className="font-semibold text-slate-800 mt-0.5">{selectedVisitor.contactPersonName || 'N/A'}</p>
                                     </div>
-                                )}
-                                <div className="flex items-center gap-2">
-                                    <MapPin className="w-4 h-4 text-slate-400" />
+                                    <div>
+                                        <span className="text-[10px] text-slate-400 uppercase font-medium">Mobile</span>
+                                        <p className="font-semibold text-slate-800 mt-0.5">{selectedVisitor.mobile || 'N/A'}</p>
+                                    </div>
+                                    <div>
+                                        <span className="text-[10px] text-slate-400 uppercase font-medium">Email</span>
+                                        <p className="font-semibold text-slate-800 mt-0.5">{selectedVisitor.email || 'N/A'}</p>
+                                    </div>
+                                    <div>
+                                        <span className="text-[10px] text-slate-400 uppercase font-medium">Category</span>
+                                        <p className="font-semibold text-slate-800 mt-0.5">{selectedVisitor.industryCategory || 'General'}</p>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center gap-2 text-slate-500">
+                                    <MapPin className="w-4 h-4 text-slate-400 shrink-0" />
                                     <span>
-                                        <strong>Address:</strong> {selectedVisitor.city},{' '}
+                                        {selectedVisitor.city ? `${selectedVisitor.city}, ` : ''}
                                         {selectedVisitor.district ? `${selectedVisitor.district}, ` : ''}
                                         {selectedVisitor.state}
                                     </span>
                                 </div>
                             </div>
-                        </div>
 
-                        <div className="px-5 py-3 bg-slate-50 border-t border-slate-100 flex justify-end">
-                            <button
-                                onClick={() => setSelectedVisitor(null)}
-                                className="px-4 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-100"
-                            >
-                                Close
-                            </button>
+                            <div className="px-5 py-3 bg-slate-50 border-t border-slate-100 flex justify-end">
+                                <button
+                                    onClick={() => setSelectedVisitor(null)}
+                                    className="px-4 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 cursor-pointer"
+                                >
+                                    Close
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
+                </ModalPortal>
             )}
         </div>
     );

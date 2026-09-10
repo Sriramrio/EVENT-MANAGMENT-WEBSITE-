@@ -81,7 +81,7 @@ export function StallQrGeneratorPage() {
       });
       const link = document.createElement('a');
       link.href = dataUrl;
-      const label = booking.fasciaName || booking.companyName || booking.bookingRegistrationNumber;
+      const label = booking.companyName || booking.fasciaName || booking.bookingRegistrationNumber;
       const safeLabel = label.replace(/[^a-zA-Z0-9 -]/g, '').trim().replace(/\s+/g, '_');
       link.download = `StallQR_${safeLabel}_${booking.bookingRegistrationNumber}.png`;
       document.body.appendChild(link);
@@ -176,7 +176,7 @@ export function StallQrGeneratorPage() {
       <div className="mt-5 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 print:grid-cols-2 print:gap-6">
         {printSet.map((booking) => {
           const profileUrl = `${PUBLIC_BASE_URL}/${encodeURIComponent(booking.bookingRegistrationNumber)}`;
-          const label = booking.fasciaName || booking.companyName || booking.bookingRegistrationNumber;
+          const label = booking.companyName || booking.fasciaName || booking.bookingRegistrationNumber;
           const isSelected = selected.has(booking.id);
 
           return (
@@ -203,6 +203,11 @@ export function StallQrGeneratorPage() {
 
               <p className="text-[10px] font-bold uppercase tracking-widest text-indigo-600 mt-1">{BRAND.portalName}</p>
               <h3 className="mt-1 text-sm font-black text-slate-900 leading-tight min-h-[2.2em]">{label}</h3>
+              {booking.fasciaName && booking.fasciaName.toLowerCase() !== (booking.companyName || '').toLowerCase() && (
+                <p className="text-[11px] font-medium text-slate-500 truncate -mt-1 mb-1">
+                  Brand: {booking.fasciaName}
+                </p>
+              )}
               {booking.stallNumber && <p className="text-xs text-slate-500 mt-0.5">Stall No. {booking.stallNumber}</p>}
 
               <div className="mt-3 inline-flex bg-white p-2.5 rounded-lg border border-slate-200">
@@ -211,6 +216,10 @@ export function StallQrGeneratorPage() {
 
               <p className="mt-2 font-mono text-[11px] font-bold text-slate-600 tracking-wide break-all">
                 {booking.bookingRegistrationNumber}
+              </p>
+
+              <p className="mt-2 text-[9px] font-medium text-slate-500 border-t border-slate-100 pt-1.5">
+                Scan to connect • Place at stall front
               </p>
             </div>
           );

@@ -580,11 +580,10 @@ export function EmailTemplatePage({ mode = 'all' }: EmailTemplatePageProps = {})
           <button
             type="button"
             onClick={() => setCategoryFilter('all')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition ${
-              categoryFilter === 'all'
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition ${categoryFilter === 'all'
                 ? 'bg-blue-600 text-white shadow-sm'
                 : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
-            }`}
+              }`}
           >
             All Templates ({baseTemplates.length})
           </button>
@@ -592,11 +591,10 @@ export function EmailTemplatePage({ mode = 'all' }: EmailTemplatePageProps = {})
           <button
             type="button"
             onClick={() => setCategoryFilter('custom')}
-            className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition ${
-              categoryFilter === 'custom'
+            className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition ${categoryFilter === 'custom'
                 ? 'bg-emerald-600 text-white shadow-sm'
                 : 'bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100'
-            }`}
+              }`}
           >
             <Sparkles size={13} />
             Custom Created Templates ({baseTemplates.filter(t => !t.isSystemTemplate).length})
@@ -605,11 +603,10 @@ export function EmailTemplatePage({ mode = 'all' }: EmailTemplatePageProps = {})
           <button
             type="button"
             onClick={() => setCategoryFilter('credentials')}
-            className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition ${
-              categoryFilter === 'credentials'
+            className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition ${categoryFilter === 'credentials'
                 ? 'bg-indigo-600 text-white shadow-sm'
                 : 'bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100'
-            }`}
+              }`}
           >
             <Key size={13} />
             Send Credentials
@@ -618,11 +615,10 @@ export function EmailTemplatePage({ mode = 'all' }: EmailTemplatePageProps = {})
           <button
             type="button"
             onClick={() => setCategoryFilter('exhibitor')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition ${
-              categoryFilter === 'exhibitor'
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition ${categoryFilter === 'exhibitor'
                 ? 'bg-blue-700 text-white shadow-sm'
                 : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
-            }`}
+              }`}
           >
             Exhibitor Operations
           </button>
@@ -659,17 +655,15 @@ export function EmailTemplatePage({ mode = 'all' }: EmailTemplatePageProps = {})
             return (
               <div
                 key={template.id}
-                className={`flex flex-col justify-between rounded-2xl border bg-white p-5 shadow-sm transition hover:shadow-md ${
-                  isCustom ? 'border-emerald-300 ring-2 ring-emerald-50' : 'border-slate-200'
-                }`}
+                className={`flex flex-col justify-between rounded-2xl border bg-white p-5 shadow-sm transition hover:shadow-md ${isCustom ? 'border-emerald-300 ring-2 ring-emerald-50' : 'border-slate-200'
+                  }`}
               >
                 <div>
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex flex-wrap items-center gap-2">
                       <span
-                        className={`inline-flex items-center rounded-lg px-2.5 py-1 text-xs font-bold tracking-wide font-mono ${
-                          isCustom ? 'bg-emerald-600 text-white' : 'bg-blue-600 text-white'
-                        }`}
+                        className={`inline-flex items-center rounded-lg px-2.5 py-1 text-xs font-bold tracking-wide font-mono ${isCustom ? 'bg-emerald-600 text-white' : 'bg-blue-600 text-white'
+                          }`}
                       >
                         {template.templateCode}
                       </span>
@@ -686,11 +680,10 @@ export function EmailTemplatePage({ mode = 'all' }: EmailTemplatePageProps = {})
                     </div>
 
                     <span
-                      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                        template.isActive
+                      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ${template.isActive
                           ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                           : 'bg-slate-100 text-slate-500 border border-slate-200'
-                      }`}
+                        }`}
                     >
                       <span className={`h-1.5 w-1.5 rounded-full ${template.isActive ? 'bg-emerald-500' : 'bg-slate-400'}`} />
                       {template.isActive ? 'Active' : 'Disabled'}
@@ -777,8 +770,8 @@ export function EmailTemplatePage({ mode = 'all' }: EmailTemplatePageProps = {})
                       {modalMode === 'create'
                         ? 'Create New Email Template'
                         : modalMode === 'edit'
-                        ? `Edit Template: ${templateName || templateCode}`
-                        : `Use & Dispatch Template: ${templateName || templateCode}`}
+                          ? `Edit Template: ${templateName || templateCode}`
+                          : `Use & Dispatch Template: ${templateName || templateCode}`}
                     </h2>
                     <p className="text-xs text-blue-200">
                       Compose email subject & content, customize recipients, and save into database for instant or future use.
@@ -897,9 +890,8 @@ export function EmailTemplatePage({ mode = 'all' }: EmailTemplatePageProps = {})
                                 }
                               }, 50);
                             }}
-                            className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition ${
-                              activeTab === 'visual' ? 'bg-msme-blue text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'
-                            }`}
+                            className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition ${activeTab === 'visual' ? 'bg-msme-blue text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'
+                              }`}
                           >
                             <FileText size={14} /> Visual Rich Editor
                           </button>
@@ -912,9 +904,8 @@ export function EmailTemplatePage({ mode = 'all' }: EmailTemplatePageProps = {})
                               }
                               setActiveTab('editor');
                             }}
-                            className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition ${
-                              activeTab === 'editor' ? 'bg-msme-blue text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'
-                            }`}
+                            className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition ${activeTab === 'editor' ? 'bg-msme-blue text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'
+                              }`}
                           >
                             <Code size={14} /> HTML Source Code
                           </button>
@@ -1017,11 +1008,10 @@ export function EmailTemplatePage({ mode = 'all' }: EmailTemplatePageProps = {})
                         <button
                           type="button"
                           onClick={() => setSendOption('save_only')}
-                          className={`p-3 rounded-xl border text-left text-xs font-semibold transition ${
-                            sendOption === 'save_only'
+                          className={`p-3 rounded-xl border text-left text-xs font-semibold transition ${sendOption === 'save_only'
                               ? 'border-emerald-600 bg-emerald-50/90 text-emerald-900 ring-2 ring-emerald-500/20 shadow-xs'
                               : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
-                          }`}
+                            }`}
                         >
                           <div className="flex items-center gap-1.5 font-bold mb-1">
                             <Save size={14} className="text-emerald-600" />
@@ -1035,11 +1025,10 @@ export function EmailTemplatePage({ mode = 'all' }: EmailTemplatePageProps = {})
                         <button
                           type="button"
                           onClick={() => setSendOption('send_now')}
-                          className={`p-3 rounded-xl border text-left text-xs font-semibold transition ${
-                            sendOption === 'send_now'
+                          className={`p-3 rounded-xl border text-left text-xs font-semibold transition ${sendOption === 'send_now'
                               ? 'border-blue-600 bg-blue-50/90 text-blue-900 ring-2 ring-blue-500/20 shadow-xs'
                               : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
-                          }`}
+                            }`}
                         >
                           <div className="flex items-center gap-1.5 font-bold mb-1">
                             <Send size={14} className="text-blue-600" />
@@ -1062,11 +1051,10 @@ export function EmailTemplatePage({ mode = 'all' }: EmailTemplatePageProps = {})
                             <button
                               type="button"
                               onClick={() => setRecipientType('all_exhibitors')}
-                              className={`p-2 rounded-xl border text-left text-xs font-semibold transition ${
-                                recipientType === 'all_exhibitors'
+                              className={`p-2 rounded-xl border text-left text-xs font-semibold transition ${recipientType === 'all_exhibitors'
                                   ? 'border-blue-600 bg-blue-50 text-blue-900 ring-1 ring-blue-500'
                                   : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
-                              }`}
+                                }`}
                             >
                               <div className="flex items-center gap-1 mb-0.5">
                                 <Store size={12} className="text-blue-600" />
@@ -1080,11 +1068,10 @@ export function EmailTemplatePage({ mode = 'all' }: EmailTemplatePageProps = {})
                             <button
                               type="button"
                               onClick={() => setRecipientType('allocated_exhibitors')}
-                              className={`p-2 rounded-xl border text-left text-xs font-semibold transition ${
-                                recipientType === 'allocated_exhibitors'
+                              className={`p-2 rounded-xl border text-left text-xs font-semibold transition ${recipientType === 'allocated_exhibitors'
                                   ? 'border-blue-600 bg-blue-50 text-blue-900 ring-1 ring-blue-500'
                                   : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
-                              }`}
+                                }`}
                             >
                               <div className="flex items-center gap-1 mb-0.5">
                                 <UserCheck size={12} className="text-emerald-600" />
@@ -1098,11 +1085,10 @@ export function EmailTemplatePage({ mode = 'all' }: EmailTemplatePageProps = {})
                             <button
                               type="button"
                               onClick={() => setRecipientType('all_visitors')}
-                              className={`p-2 rounded-xl border text-left text-xs font-semibold transition ${
-                                recipientType === 'all_visitors'
+                              className={`p-2 rounded-xl border text-left text-xs font-semibold transition ${recipientType === 'all_visitors'
                                   ? 'border-blue-600 bg-blue-50 text-blue-900 ring-1 ring-blue-500'
                                   : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
-                              }`}
+                                }`}
                             >
                               <div className="flex items-center gap-1 mb-0.5">
                                 <Users size={12} className="text-purple-600" />
@@ -1116,11 +1102,10 @@ export function EmailTemplatePage({ mode = 'all' }: EmailTemplatePageProps = {})
                             <button
                               type="button"
                               onClick={() => setRecipientType('marketplace_buyers')}
-                              className={`p-2 rounded-xl border text-left text-xs font-semibold transition ${
-                                recipientType === 'marketplace_buyers'
+                              className={`p-2 rounded-xl border text-left text-xs font-semibold transition ${recipientType === 'marketplace_buyers'
                                   ? 'border-blue-600 bg-blue-50 text-blue-900 ring-1 ring-blue-500'
                                   : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
-                              }`}
+                                }`}
                             >
                               <div className="flex items-center gap-1 mb-0.5">
                                 <Building size={12} className="text-teal-600" />
@@ -1134,11 +1119,10 @@ export function EmailTemplatePage({ mode = 'all' }: EmailTemplatePageProps = {})
                             <button
                               type="button"
                               onClick={() => setRecipientType('marketplace_sellers')}
-                              className={`p-2 rounded-xl border text-left text-xs font-semibold transition ${
-                                recipientType === 'marketplace_sellers'
+                              className={`p-2 rounded-xl border text-left text-xs font-semibold transition ${recipientType === 'marketplace_sellers'
                                   ? 'border-blue-600 bg-blue-50 text-blue-900 ring-1 ring-blue-500'
                                   : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
-                              }`}
+                                }`}
                             >
                               <div className="flex items-center gap-1 mb-0.5">
                                 <Building size={12} className="text-amber-600" />
@@ -1152,11 +1136,10 @@ export function EmailTemplatePage({ mode = 'all' }: EmailTemplatePageProps = {})
                             <button
                               type="button"
                               onClick={() => setRecipientType('vips')}
-                              className={`p-2 rounded-xl border text-left text-xs font-semibold transition ${
-                                recipientType === 'vips'
+                              className={`p-2 rounded-xl border text-left text-xs font-semibold transition ${recipientType === 'vips'
                                   ? 'border-blue-600 bg-blue-50 text-blue-900 ring-1 ring-blue-500'
                                   : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
-                              }`}
+                                }`}
                             >
                               <div className="flex items-center gap-1 mb-0.5">
                                 <Crown size={12} className="text-amber-500" />
@@ -1170,11 +1153,10 @@ export function EmailTemplatePage({ mode = 'all' }: EmailTemplatePageProps = {})
                             <button
                               type="button"
                               onClick={() => setRecipientType('selected_recipients')}
-                              className={`p-2 rounded-xl border text-left text-xs font-semibold transition ${
-                                recipientType === 'selected_recipients'
+                              className={`p-2 rounded-xl border text-left text-xs font-semibold transition ${recipientType === 'selected_recipients'
                                   ? 'border-blue-600 bg-blue-50 text-blue-900 ring-1 ring-blue-500'
                                   : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
-                              }`}
+                                }`}
                             >
                               <div className="flex items-center gap-1 mb-0.5">
                                 <Search size={12} className="text-indigo-600" />
@@ -1188,11 +1170,10 @@ export function EmailTemplatePage({ mode = 'all' }: EmailTemplatePageProps = {})
                             <button
                               type="button"
                               onClick={() => setRecipientType('custom_list')}
-                              className={`p-2 rounded-xl border text-left text-xs font-semibold transition ${
-                                recipientType === 'custom_list'
+                              className={`p-2 rounded-xl border text-left text-xs font-semibold transition ${recipientType === 'custom_list'
                                   ? 'border-blue-600 bg-blue-50 text-blue-900 ring-1 ring-blue-500'
                                   : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
-                              }`}
+                                }`}
                             >
                               <div className="flex items-center gap-1 mb-0.5">
                                 <AtSign size={12} className="text-slate-600" />
@@ -1323,18 +1304,16 @@ export function EmailTemplatePage({ mode = 'all' }: EmailTemplatePageProps = {})
                         <button
                           type="button"
                           onClick={() => setPreviewDevice('desktop')}
-                          className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-semibold transition ${
-                            previewDevice === 'desktop' ? 'bg-white text-msme-blue shadow-xs' : 'text-slate-500'
-                          }`}
+                          className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-semibold transition ${previewDevice === 'desktop' ? 'bg-white text-msme-blue shadow-xs' : 'text-slate-500'
+                            }`}
                         >
                           <Monitor size={12} /> Desktop
                         </button>
                         <button
                           type="button"
                           onClick={() => setPreviewDevice('mobile')}
-                          className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-semibold transition ${
-                            previewDevice === 'mobile' ? 'bg-white text-msme-blue shadow-xs' : 'text-slate-500'
-                          }`}
+                          className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-semibold transition ${previewDevice === 'mobile' ? 'bg-white text-msme-blue shadow-xs' : 'text-slate-500'
+                            }`}
                         >
                           <Smartphone size={12} /> Mobile
                         </button>
@@ -1343,9 +1322,8 @@ export function EmailTemplatePage({ mode = 'all' }: EmailTemplatePageProps = {})
 
                     <div className="rounded-2xl border border-slate-200 bg-slate-100/60 p-3 flex justify-center">
                       <div
-                        className={`bg-white rounded-2xl border border-slate-200 shadow-lg overflow-hidden transition-all ${
-                          previewDevice === 'mobile' ? 'max-w-[340px] w-full' : 'w-full'
-                        }`}
+                        className={`bg-white rounded-2xl border border-slate-200 shadow-lg overflow-hidden transition-all ${previewDevice === 'mobile' ? 'max-w-[340px] w-full' : 'w-full'
+                          }`}
                       >
                         <div className="border-b border-slate-200 bg-slate-50 p-3 text-xs space-y-1">
                           <div className="flex justify-between text-slate-400 text-[10px]">

@@ -8,6 +8,9 @@ import { BRAND } from '../../config/brand';
 
 interface MeResponse {
   companyName: string;
+  legalName?: string | null;
+  tradeName?: string | null;
+  fasciaName?: string | null;
   registrationNumber: string | null;
   stallNumber: string | null;
 }
@@ -31,7 +34,8 @@ export function ExhibitorStallQrPage() {
 
   const regNum = me?.registrationNumber || 'MSME-STALL';
   const profileUrl = `${PUBLIC_BASE_URL}/${encodeURIComponent(regNum)}`;
-  const label = me?.companyName || 'Stall Exhibitor';
+  const label = me?.legalName || me?.companyName || 'Stall Exhibitor';
+  const brand = me?.tradeName || me?.fasciaName;
 
   const handleDownload = async () => {
     if (!cardRef.current) return;
@@ -100,6 +104,11 @@ export function ExhibitorStallQrPage() {
             <h2 className="mt-1 text-xl font-extrabold text-white px-2 leading-tight">
               {label}
             </h2>
+            {brand && brand.toLowerCase() !== label.toLowerCase() && (
+              <p className="mt-1 text-xs text-blue-200 font-medium">
+                Brand: {brand}
+              </p>
+            )}
             <p className="mt-1.5 text-xs text-blue-100 font-medium">
               {me?.stallNumber ? `Stall No. ${me.stallNumber}` : 'Scan to view stall profile'}
             </p>
@@ -113,6 +122,16 @@ export function ExhibitorStallQrPage() {
 
             <p className="mt-4 font-mono text-xs font-bold tracking-widest text-slate-500">
               {regNum}
+            </p>
+          </div>
+
+          {/* Bottom Card Footer Banner */}
+          <div className="border-t border-slate-100 bg-slate-50 px-5 py-3.5 text-center">
+            <p className="m-0 text-xs font-bold text-[#0B3B75] leading-tight">
+              Scan QR code to view stall profile &amp; connect
+            </p>
+            <p className="m-0 mt-1 text-[10px] font-medium text-slate-500">
+              MSME Sangamam Connect • Place at stall front for visitors
             </p>
           </div>
         </div>

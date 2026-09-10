@@ -372,43 +372,9 @@ public sealed class EmailSender : IEmailSender
         return text.Trim();
     }
 
-    private const string EmailFooterHtml = @"
-<div style=""margin-top:32px; padding-top:20px; border-top:1px solid #e2e8f0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:12px; color:#64748b; text-align:center; line-height:1.6;"">
-    <p style=""margin:0 0 4px 0; font-size:13px; font-weight:600; color:#1e293b;"">
-        Digital supported by <a href=""https://www.atribsglobal.com/"" target=""_blank"" style=""color:#0d6efd; text-decoration:none; font-weight:700;"">Atribs</a>
-    </p>
-    <p style=""margin:0; font-size:11px; color:#94a3b8;"">
-        ATRIBS GLOBAL &bull; Technology &amp; Digital Transformation Partner &bull; <a href=""https://www.atribsglobal.com/"" target=""_blank"" style=""color:#0d6efd; text-decoration:none;"">www.atribsglobal.com</a>
-    </p>
-</div>";
-
     public static string EnsureEmailFooter(string html)
     {
-        if (string.IsNullOrWhiteSpace(html))
-        {
-            return html;
-        }
-
-        if (html.Contains("Digital supported by Atribs", StringComparison.OrdinalIgnoreCase) ||
-            html.Contains("Digital Support by Atribs", StringComparison.OrdinalIgnoreCase))
-        {
-            return html;
-        }
-
-        if (html.Contains("</body>", StringComparison.OrdinalIgnoreCase))
-        {
-            var idx = html.LastIndexOf("</body>", StringComparison.OrdinalIgnoreCase);
-            return html.Insert(idx, EmailFooterHtml);
-        }
-        else if (html.TrimEnd().EndsWith("</div>", StringComparison.OrdinalIgnoreCase))
-        {
-            var idx = html.LastIndexOf("</div>", StringComparison.OrdinalIgnoreCase);
-            return html.Insert(idx, EmailFooterHtml);
-        }
-        else
-        {
-            return html + EmailFooterHtml;
-        }
+        return html ?? string.Empty;
     }
 
     private static void AddRecipients(

@@ -9,6 +9,7 @@ import {
   QualityComplianceItem,
 } from "./wizard/requirementWizardStore";
 import { useSaveDraft } from "../../../../services/buyer/hooks";
+import { ModalPortal } from "../../../../shared/components/ModalPortal";
 
 export default function RequirementMaterialsQualityPage() {
   const nav = useNavigate();
@@ -302,124 +303,128 @@ export default function RequirementMaterialsQualityPage() {
 
       {/* Add Material Modal */}
       {showAddMatModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl animate-in fade-in">
-            <h3 className="text-base font-extrabold text-slate-900">Add Material</h3>
-            <form onSubmit={handleAddMaterial} className="mt-4 space-y-4">
-              <div>
-                <label className="mb-1 block text-xs font-bold text-slate-700">Material Name *</label>
-                <input
-                  type="text"
-                  required
-                  value={newMatName}
-                  onChange={(e) => setNewMatName(e.target.value)}
-                  placeholder="e.g. Copper Alloy / Brass / Titanium"
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium text-slate-800 outline-none focus:border-blue-500"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-bold text-slate-700">Grade / Specification</label>
-                <input
-                  type="text"
-                  value={newMatGrade}
-                  onChange={(e) => setNewMatGrade(e.target.value)}
-                  placeholder="e.g. C36000 / IS 319"
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium text-slate-800 outline-none focus:border-blue-500"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-bold text-slate-700">Mandatory</label>
-                <select
-                  value={newMatMandatory}
-                  onChange={(e) => setNewMatMandatory(e.target.value as any)}
-                  className="w-full rounded-lg border border-slate-300 px-2.5 py-2 text-xs font-medium text-slate-800"
-                >
-                  <option value="Yes">Yes</option>
-                  <option value="Preferred">Preferred</option>
-                  <option value="Optional">Optional</option>
-                </select>
-              </div>
-              <div className="flex justify-end gap-2 pt-3">
-                <button
-                  type="button"
-                  onClick={() => setShowAddMatModal(false)}
-                  className="rounded-lg border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="rounded-lg bg-blue-600 px-5 py-2 text-xs font-bold text-white hover:bg-blue-700"
-                >
-                  Add Material
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Add Quality Modal */}
-      {showAddQualModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl animate-in fade-in">
-            <h3 className="text-base font-extrabold text-slate-900">Add Quality & Compliance</h3>
-            <form onSubmit={handleAddQuality} className="mt-4 space-y-4">
-              <div>
-                <label className="mb-1 block text-xs font-bold text-slate-700">Standard / Document Name *</label>
-                <input
-                  type="text"
-                  required
-                  value={newQualStandard}
-                  onChange={(e) => setNewQualStandard(e.target.value)}
-                  placeholder="e.g. PPAP Level 3 / AS9100D"
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium text-slate-800 outline-none focus:border-blue-500"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
+        <ModalPortal>
+          <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+            <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+              <h3 className="text-base font-extrabold text-slate-900">Add Material</h3>
+              <form onSubmit={handleAddMaterial} className="mt-4 space-y-4">
+                <div>
+                  <label className="mb-1 block text-xs font-bold text-slate-700">Material Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={newMatName}
+                    onChange={(e) => setNewMatName(e.target.value)}
+                    placeholder="e.g. Copper Alloy / Brass / Titanium"
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium text-slate-800 outline-none focus:border-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-bold text-slate-700">Grade / Specification</label>
+                  <input
+                    type="text"
+                    value={newMatGrade}
+                    onChange={(e) => setNewMatGrade(e.target.value)}
+                    placeholder="e.g. C36000 / IS 319"
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium text-slate-800 outline-none focus:border-blue-500"
+                  />
+                </div>
                 <div>
                   <label className="mb-1 block text-xs font-bold text-slate-700">Mandatory</label>
                   <select
-                    value={newQualMandatory}
-                    onChange={(e) => setNewQualMandatory(e.target.value as any)}
+                    value={newMatMandatory}
+                    onChange={(e) => setNewMatMandatory(e.target.value as any)}
                     className="w-full rounded-lg border border-slate-300 px-2.5 py-2 text-xs font-medium text-slate-800"
                   >
                     <option value="Yes">Yes</option>
                     <option value="Preferred">Preferred</option>
-                    <option value="Conditional">Conditional</option>
+                    <option value="Optional">Optional</option>
                   </select>
                 </div>
-                <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-700">Type</label>
-                  <select
-                    value={newQualType}
-                    onChange={(e) => setNewQualType(e.target.value as any)}
-                    className="w-full rounded-lg border border-slate-300 px-2.5 py-2 text-xs font-medium text-slate-800"
+                <div className="flex justify-end gap-2 pt-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddMatModal(false)}
+                    className="rounded-lg border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50"
                   >
-                    <option value="Certification">Certification</option>
-                    <option value="Document">Document</option>
-                    <option value="Report">Report</option>
-                  </select>
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="rounded-lg bg-blue-600 px-5 py-2 text-xs font-bold text-white hover:bg-blue-700"
+                  >
+                    Add Material
+                  </button>
                 </div>
-              </div>
-              <div className="flex justify-end gap-2 pt-3">
-                <button
-                  type="button"
-                  onClick={() => setShowAddQualModal(false)}
-                  className="rounded-lg border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="rounded-lg bg-blue-600 px-5 py-2 text-xs font-bold text-white hover:bg-blue-700"
-                >
-                  Add Quality
-                </button>
-              </div>
-            </form>
+              </form>
+            </div>
           </div>
-        </div>
+        </ModalPortal>
+      )}
+
+      {/* Add Quality Modal */}
+      {showAddQualModal && (
+        <ModalPortal>
+          <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+            <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+              <h3 className="text-base font-extrabold text-slate-900">Add Quality & Compliance</h3>
+              <form onSubmit={handleAddQuality} className="mt-4 space-y-4">
+                <div>
+                  <label className="mb-1 block text-xs font-bold text-slate-700">Standard / Document Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={newQualStandard}
+                    onChange={(e) => setNewQualStandard(e.target.value)}
+                    placeholder="e.g. PPAP Level 3 / AS9100D"
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium text-slate-800 outline-none focus:border-blue-500"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="mb-1 block text-xs font-bold text-slate-700">Mandatory</label>
+                    <select
+                      value={newQualMandatory}
+                      onChange={(e) => setNewQualMandatory(e.target.value as any)}
+                      className="w-full rounded-lg border border-slate-300 px-2.5 py-2 text-xs font-medium text-slate-800"
+                    >
+                      <option value="Yes">Yes</option>
+                      <option value="Preferred">Preferred</option>
+                      <option value="Conditional">Conditional</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-bold text-slate-700">Type</label>
+                    <select
+                      value={newQualType}
+                      onChange={(e) => setNewQualType(e.target.value as any)}
+                      className="w-full rounded-lg border border-slate-300 px-2.5 py-2 text-xs font-medium text-slate-800"
+                    >
+                      <option value="Certification">Certification</option>
+                      <option value="Document">Document</option>
+                      <option value="Report">Report</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2 pt-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddQualModal(false)}
+                    className="rounded-lg border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="rounded-lg bg-blue-600 px-5 py-2 text-xs font-bold text-white hover:bg-blue-700"
+                  >
+                    Add Quality
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </ModalPortal>
       )}
     </div>
   );

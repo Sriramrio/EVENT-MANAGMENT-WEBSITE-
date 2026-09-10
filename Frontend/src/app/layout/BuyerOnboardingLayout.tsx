@@ -16,7 +16,7 @@ export function BuyerOnboardingLayout() {
     <div className="min-h-screen bg-slate-50">
       <BrandHeader title="Buyer Registration & Requirement" subtitle="Structured onboarding and sourcing workflow" stepBadge={!hideStepper ? `Step ${step} of 10` : undefined} />
       {!hideStepper && <JourneyStepper current={step} />}
-      <main className="mx-auto max-w-7xl p-4 md:p-6">
+      <main className="mx-auto max-w-7xl p-4 md:p-6 pb-28 sm:pb-20">
         <Outlet />
         <MaintainedByFooter />
       </main>

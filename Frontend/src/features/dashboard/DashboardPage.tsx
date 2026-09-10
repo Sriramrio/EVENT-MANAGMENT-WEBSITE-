@@ -12,6 +12,7 @@ import {
   stallStatusOrder
 } from '../../config/statusConfig';
 import { object } from 'zod';
+import { ModalPortal } from '../../shared/components/ModalPortal';
 
 const labels: Record<string, string> = {
   totalRegistrations: 'Total Registrations',
@@ -293,9 +294,9 @@ export function DashboardPage() {
       blockedStalls: stallStatusCounts['Blocked'] ?? 0,
       reservation: stallStatusCounts['Reservation'] ?? 0,
       releasedDueToNonPayment: stallStatusCounts['Released'] ?? 0,
-      paymentVerified: paymentVerifiedCount ?? 0,
+      paymentVerified: bookings.length > 0 ? paymentVerifiedCount : (summary.paymentVerified ?? paymentVerifiedCount ?? 0),
     }),
-    [summary, stalls, stallStatusCounts, paymentVerifiedCount]
+    [summary, stalls, stallStatusCounts, paymentVerifiedCount, bookings.length]
   );
 
   const visibleStalls = useMemo(() => {
@@ -654,17 +655,18 @@ export function DashboardPage() {
 
       {/* Blocked/Frozen Stall Details Modal */}
       {selectedStall && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm"
-          onMouseDown={event => {
-            if (
-              event.target ===
-              event.currentTarget
-            ) {
-              closeStallDetailsModal();
-            }
-          }}
-        >
+        <ModalPortal>
+          <div
+            className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm"
+            onMouseDown={event => {
+              if (
+                event.target ===
+                event.currentTarget
+              ) {
+                closeStallDetailsModal();
+              }
+            }}
+          >
           <div
             role="dialog"
             aria-modal="true"
@@ -900,6 +902,7 @@ export function DashboardPage() {
             </div>
           </div>
         </div>
+        </ModalPortal>
       )}
     </div>
   );

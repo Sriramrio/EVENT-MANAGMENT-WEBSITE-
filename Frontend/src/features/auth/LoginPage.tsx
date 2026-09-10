@@ -8,6 +8,7 @@ import { visitorApiClient, setVisitorSession, VisitorApiError } from '../../data
 import { BrandHeader } from '../../shared/components/BrandHeader';
 import { FloatingSupportFooter } from '../../components/BaseComponents/FloatingSupportFooter';
 import { BRAND } from '../../config/brand';
+import { ModalPortal } from '../../shared/components/ModalPortal';
 
 const TENANT_ID = '11111111-1111-1111-1111-111111111111';
 
@@ -188,34 +189,36 @@ export function LoginPage() {
   return (
     <main className="relative flex min-h-screen items-center justify-center bg-[linear-gradient(135deg,#eff6ff,#fff7ed)] p-4 pb-20 sm:p-6 sm:pb-6">
       {popup && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
-          <div className={`w-full max-w-md rounded-2xl border bg-white p-6 shadow-2xl transition-all ${popup.type === 'success' ? 'border-emerald-200' : 'border-red-200'}`}>
-            <div className="flex items-start justify-between">
-              <div className="flex items-center gap-3">
-                <div className={`grid h-10 w-10 place-items-center rounded-full ${popup.type === 'success' ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}`}>
-                  {popup.type === 'success' ? <CheckCircle2 className="h-6 w-6" /> : <AlertCircle className="h-6 w-6" />}
+        <ModalPortal>
+          <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className={`w-full max-w-md rounded-2xl border bg-white p-6 shadow-2xl transition-all ${popup.type === 'success' ? 'border-emerald-200' : 'border-red-200'}`}>
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`grid h-10 w-10 place-items-center rounded-full ${popup.type === 'success' ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}`}>
+                    {popup.type === 'success' ? <CheckCircle2 className="h-6 w-6" /> : <AlertCircle className="h-6 w-6" />}
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900">{popup.title}</h3>
+                    <p className="text-xs text-slate-500">System Notification</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-base font-bold text-slate-900">{popup.title}</h3>
-                  <p className="text-xs text-slate-500">System Notification</p>
-                </div>
+                {popup.type === 'error' && (
+                  <button type="button" onClick={() => setPopup(null)} className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
+                    <X className="h-5 w-5" />
+                  </button>
+                )}
               </div>
+              <p className={`mt-4 rounded-xl p-3 text-sm font-medium ${popup.type === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
+                {popup.message}
+              </p>
               {popup.type === 'error' && (
-                <button type="button" onClick={() => setPopup(null)} className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
-                  <X className="h-5 w-5" />
+                <button type="button" onClick={() => setPopup(null)} className="mt-5 w-full rounded-xl bg-slate-900 py-2.5 text-sm font-bold text-white hover:bg-slate-800 transition">
+                  Dismiss
                 </button>
               )}
             </div>
-            <p className={`mt-4 rounded-xl p-3 text-sm font-medium ${popup.type === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
-              {popup.message}
-            </p>
-            {popup.type === 'error' && (
-              <button type="button" onClick={() => setPopup(null)} className="mt-5 w-full rounded-xl bg-slate-900 py-2.5 text-sm font-bold text-white hover:bg-slate-800 transition">
-                Dismiss
-              </button>
-            )}
           </div>
-        </div>
+        </ModalPortal>
       )}
 
       <div className="grid w-full max-w-6xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl lg:grid-cols-2">

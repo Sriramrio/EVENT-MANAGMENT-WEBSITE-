@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
     Building2,
     Search,
@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 import { apiClient, ApiError } from '../../../data/api/apiClient';
 import { PageHeader } from '../../../shared/components/PageHeader';
-import { RefreshListButton } from '../../../shared/components/RefreshListButton';
+import { ModalPortal } from '../../../shared/components/ModalPortal';
 
 export interface AdminExhibitor {
     id: string;
@@ -91,23 +91,32 @@ type SortKey =
 
 type SortDirection = 'asc' | 'desc';
 
-const ADMIN_EXHIBITORS_QUERY_KEY = ['admin', 'exhibitors'] as const;
-
 export function AdminExhibitorListPage() {
+    const queryClient = useQueryClient();
+
+    // TanStack Query cache: instant 0ms load on tab switch with background revalidation
     const {
         data: exhibitors = [],
-        isLoading: loading,
+        isLoading,
         isFetching,
         error: queryError,
-        refetch,
+        refetch
     } = useQuery({
-        queryKey: ADMIN_EXHIBITORS_QUERY_KEY,
-        queryFn: () => apiClient.get<AdminExhibitor[]>('/admin/exhibitors'),
-        staleTime: 5 * 60 * 1000,
-        gcTime: 10 * 60 * 1000,
+        queryKey: ['admin', 'exhibitors'],
+        queryFn: async () => {
+            const data = await apiClient.get<AdminExhibitor[]>('/admin/exhibitors');
+            return Array.isArray(data) ? data : [];
+        },
+        staleTime: 60_000,
     });
 
-    const error = queryError instanceof Error ? queryError.message : queryError ? 'Failed to load exhibitors.' : null;
+    // Loading spinner is only shown on initial cold load when no cached data exists
+    const loading = isLoading && exhibitors.length === 0;
+    const error = queryError ? (queryError instanceof ApiError ? queryError.message : 'Failed to load exhibitors.') : null;
+
+    const loadExhibitors = () => {
+        void refetch();
+    };
 
     // Search & Filters State
     const [searchQuery, setSearchQuery] = useState('');
@@ -474,8 +483,8 @@ export function AdminExhibitorListPage() {
                     </div>
                     <button
                         type="button"
-                        onClick={() => refetch()}
-                        className="rounded-lg bg-rose-600 px-3 py-1 text-white hover:bg-rose-700 cursor-pointer"
+                        onClick={loadExhibitors}
+                        className="rounded-lg bg-rose-600 px-3 py-1 text-white hover:bg-rose-700"
                     >
                         Retry
                     </button>
@@ -519,18 +528,21 @@ export function AdminExhibitorListPage() {
                             type="button"
                             onClick={handleExportCsv}
                             disabled={sortedExhibitors.length === 0}
-                            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50 hover:text-msme-blue transition disabled:opacity-40 cursor-pointer"
+                            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50 hover:text-msme-blue transition disabled:opacity-40"
                             title="Export filtered list to CSV"
                         >
                             <Download size={14} /> Export CSV ({sortedExhibitors.length})
                         </button>
 
-                        <RefreshListButton
-                            onRefresh={() => refetch()}
-                            loading={isFetching}
-                            label="Refresh"
-                            title="Fetch latest exhibitors from database"
-                        />
+                        <button
+                            type="button"
+                            onClick={() => void refetch()}
+                            disabled={isFetching}
+                            className="rounded-xl border border-slate-200 bg-white p-2 text-slate-600 hover:bg-slate-50 shadow-xs transition"
+                            title="Refresh exhibitor list"
+                        >
+                            <RefreshCw size={16} className={isFetching ? 'animate-spin' : ''} />
+                        </button>
                     </div>
                 </div>
 
@@ -589,8 +601,8 @@ export function AdminExhibitorListPage() {
                                 setPage(1);
                             }}
                             className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition ${lubFilter === 'ALL'
-                                    ? 'bg-white text-slate-900 shadow-xs'
-                                    : 'text-slate-600 hover:text-slate-900'
+                                ? 'bg-white text-slate-900 shadow-xs'
+                                : 'text-slate-600 hover:text-slate-900'
                                 }`}
                         >
                             All LUB
@@ -602,8 +614,8 @@ export function AdminExhibitorListPage() {
                                 setPage(1);
                             }}
                             className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition ${lubFilter === 'MEMBER'
-                                    ? 'bg-amber-600 text-white shadow-xs'
-                                    : 'text-amber-800 hover:bg-amber-100/50'
+                                ? 'bg-amber-600 text-white shadow-xs'
+                                : 'text-amber-800 hover:bg-amber-100/50'
                                 }`}
                         >
                             LUB Members ({metrics.lubCount})
@@ -615,8 +627,8 @@ export function AdminExhibitorListPage() {
                                 setPage(1);
                             }}
                             className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition ${lubFilter === 'NON_MEMBER'
-                                    ? 'bg-slate-700 text-white shadow-xs'
-                                    : 'text-slate-600 hover:bg-slate-200'
+                                ? 'bg-slate-700 text-white shadow-xs'
+                                : 'text-slate-600 hover:bg-slate-200'
                                 }`}
                         >
                             Non-Members
@@ -632,8 +644,8 @@ export function AdminExhibitorListPage() {
                                 setPage(1);
                             }}
                             className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition ${bookingFilter === 'ALL'
-                                    ? 'bg-white text-slate-900 shadow-xs'
-                                    : 'text-slate-600 hover:text-slate-900'
+                                ? 'bg-white text-slate-900 shadow-xs'
+                                : 'text-slate-600 hover:text-slate-900'
                                 }`}
                         >
                             All Bookings
@@ -645,8 +657,8 @@ export function AdminExhibitorListPage() {
                                 setPage(1);
                             }}
                             className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition ${bookingFilter === 'BOOKED'
-                                    ? 'bg-emerald-600 text-white shadow-xs'
-                                    : 'text-emerald-800 hover:bg-emerald-100/50'
+                                ? 'bg-emerald-600 text-white shadow-xs'
+                                : 'text-emerald-800 hover:bg-emerald-100/50'
                                 }`}
                         >
                             Booked ({metrics.bookedCount})
@@ -658,8 +670,8 @@ export function AdminExhibitorListPage() {
                                 setPage(1);
                             }}
                             className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition ${bookingFilter === 'UNBOOKED'
-                                    ? 'bg-slate-700 text-white shadow-xs'
-                                    : 'text-slate-600 hover:bg-slate-200'
+                                ? 'bg-slate-700 text-white shadow-xs'
+                                : 'text-slate-600 hover:bg-slate-200'
                                 }`}
                         >
                             No Booking
@@ -1074,8 +1086,8 @@ export function AdminExhibitorListPage() {
                                     type="button"
                                     onClick={() => setPage(p)}
                                     className={`rounded-lg px-3 py-1 text-xs sm:text-sm font-semibold transition ${p === safePage
-                                            ? 'bg-msme-blue text-white'
-                                            : 'border border-slate-200 text-slate-600 hover:border-msme-blue hover:text-msme-blue'
+                                        ? 'bg-msme-blue text-white'
+                                        : 'border border-slate-200 text-slate-600 hover:border-msme-blue hover:text-msme-blue'
                                         }`}
                                 >
                                     {p}
@@ -1112,8 +1124,9 @@ export function AdminExhibitorListPage() {
 
             {/* VIEW DETAILS MODAL (Read-Only) */}
             {selectedExhibitor && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4 overflow-y-auto">
-                    <div className="w-full max-w-4xl rounded-3xl bg-white shadow-2xl border border-slate-200 my-8 overflow-hidden animate-in zoom-in-95 duration-200">
+                <ModalPortal>
+                    <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4 overflow-y-auto">
+                        <div className="w-full max-w-4xl rounded-3xl bg-white shadow-2xl border border-slate-200 my-8 overflow-hidden animate-in zoom-in-95 duration-200">
                         {/* Modal Header */}
                         <div className="bg-gradient-to-r from-msme-blue via-blue-900 to-indigo-950 p-6 text-white relative">
                             <button
@@ -1245,7 +1258,7 @@ export function AdminExhibitorListPage() {
                                     <div className="rounded-xl bg-slate-50 p-3 border border-slate-200 space-y-1">
                                         <span className="text-[10px] font-bold uppercase text-slate-500">Product Keywords / Tags</span>
                                         <div className="flex flex-wrap gap-1 mt-1">
-                                            {selectedExhibitor.productKeywords.split(',').map((kw, i) => (
+                                            {selectedExhibitor.productKeywords.split(',').map((kw: string, i: number) => (
                                                 <span key={i} className="rounded-md bg-blue-100/70 text-msme-blue px-2 py-0.5 text-[11px] font-semibold">
                                                     {kw.trim()}
                                                 </span>
@@ -1477,10 +1490,10 @@ export function AdminExhibitorListPage() {
                                                 <span className="text-[10px] font-bold uppercase text-slate-500">Payment Status</span>
                                                 <p className="mt-0.5">
                                                     <span className={`inline-block rounded-md px-2 py-0.5 text-xs font-bold ${selectedExhibitor.paymentStatus === 'Fully Paid' || selectedExhibitor.paymentStatus === 'Paid'
-                                                            ? 'bg-emerald-100 text-emerald-800'
-                                                            : selectedExhibitor.paymentStatus === 'Partially Paid'
-                                                                ? 'bg-amber-100 text-amber-800'
-                                                                : 'bg-rose-100 text-rose-800'
+                                                        ? 'bg-emerald-100 text-emerald-800'
+                                                        : selectedExhibitor.paymentStatus === 'Partially Paid'
+                                                            ? 'bg-amber-100 text-amber-800'
+                                                            : 'bg-rose-100 text-rose-800'
                                                         }`}>
                                                         {selectedExhibitor.paymentStatus || 'Unpaid'}
                                                     </span>
@@ -1511,6 +1524,7 @@ export function AdminExhibitorListPage() {
                         </div>
                     </div>
                 </div>
+                </ModalPortal>
             )}
         </div>
     );

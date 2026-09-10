@@ -2,10 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ProformaInvoice, StallBooking } from '../../domain/models';
 import { repositories } from '../../data/repositoryFactory';
+import { apiClient } from '../../data/api/apiClient';
 import { useSession } from '../../app/session';
 import { PERMISSIONS } from '../../config/permissions';
 import { StatusBadge } from '../../shared/StatusBadge';
-import { RefreshListButton } from '../../shared/components/RefreshListButton';
 const BOOKINGS_KEY = ['admin', 'bookings'] as const;
 const INVOICES_KEY = ['admin', 'invoices'] as const;
 
@@ -16,6 +16,7 @@ const SPECIAL_TEN_PERCENT_TDS_BOOKING_IDS = new Set([
   'e3552d8-9ae6-4e34-98b0-b59bd07f5fc4',
   'b9d1751b-b17d-401c-be0b-a8aacc1beacd',
   '3cc38899-cb26-4282-9cf9-9aa5fd04b46f',
+  '40f09360-8694-4e6a-97ec-ee7c29a0b31f'
 ]);
 
 const SPECIAL_TEN_PERCENT_TDS_REG_NUMBERS = new Set([
@@ -24,6 +25,7 @@ const SPECIAL_TEN_PERCENT_TDS_REG_NUMBERS = new Set([
   'MSME-HOSUR-20260731-043',
   'MSME-HOSUR-20260829-129',
   'MSME-HOSUR-20260829-130',
+  'MSME-HOSUR-20260907-172'
 ]);
 
 function isSpecialTenPercentTdsBooking(booking?: { id?: string; bookingRegistrationNumber?: string } | null): boolean {
@@ -40,10 +42,14 @@ export function InvoiceQueuePage() {
   const { data: initialBookings = [] } = useQuery({
     queryKey: BOOKINGS_KEY,
     queryFn: () => repositories.bookings.list('All'),
+    staleTime: 0,
+    gcTime: 10 * 60_000,
   });
   const { data: initialInvoices = [] } = useQuery({
     queryKey: INVOICES_KEY,
     queryFn: () => repositories.invoices.list(),
+    staleTime: 0,
+    gcTime: 10 * 60_000,
   });
   const [confirmed, setConfirmed] = useState<StallBooking[]>([]);
   const [invoices, setInvoices] = useState<ProformaInvoice[]>([]);
@@ -76,19 +82,23 @@ export function InvoiceQueuePage() {
     return () => clearTimeout(timer);
   }, [justGeneratedId]);
   async function refresh() {
-    queryClient.invalidateQueries({ queryKey: BOOKINGS_KEY });
-    queryClient.invalidateQueries({ queryKey: INVOICES_KEY });
-    const [bookings, inv] = await Promise.all([
-      repositories.bookings.list('All'),
-      repositories.invoices.list(),
-    ]);
+    try {
+      const [bookings, inv] = await Promise.all([
+        repositories.bookings.list('All'),
+        repositories.invoices.list(),
+      ]);
 
-    setConfirmed(bookings.filter(b => b.bookingStatus === 'Confirmed' || isSpecialTenPercentTdsBooking(b)));
-    setInvoices(inv);
+      setConfirmed(bookings.filter(b => b.bookingStatus === 'Confirmed' || isSpecialTenPercentTdsBooking(b)));
+      setInvoices(inv);
+
+      queryClient.setQueryData(BOOKINGS_KEY, bookings);
+      queryClient.setQueryData(INVOICES_KEY, inv);
+    } catch (err) {
+      console.warn('Could not refresh invoices:', err);
+    }
   }
 
   useEffect(() => {
-
     if (!message) return;
 
     const timer = setTimeout(() => {
@@ -101,10 +111,10 @@ export function InvoiceQueuePage() {
   function getInvoiceStage(invoice?: ProformaInvoice): InvoiceStage {
     if (!invoice) return 'none';
 
-    const status = String(invoice.invoiceStatus).toLowerCase();
+    const status = String(invoice.invoiceStatus || '').toLowerCase();
 
-    if (status === 'sent') return 'sent';
-    if (invoice.taxInvoiceNumber) return 'generated';
+    if (status === 'sent' || Boolean(invoice.taxInvoiceNumber)) return 'sent';
+    if (status === 'generated') return 'generated';
 
     return 'none';
   }
@@ -116,7 +126,36 @@ export function InvoiceQueuePage() {
       setMessage(null);
       setGeneratingId(invoiceId);
 
-      await repositories.invoices.markSent(invoiceId, user.id);
+      const result = await repositories.invoices.markSent(invoiceId, user.id);
+      const generatedTaxNo = (result as any)?.taxInvoiceNumber || 'INV-GENERATED';
+
+      // Immediately update local state so it reflects with 0 delay
+      setInvoices(prev =>
+        prev.map(inv =>
+          inv.id === invoiceId
+            ? {
+              ...inv,
+              taxInvoiceNumber: generatedTaxNo,
+              invoiceStatus: 'Sent' as any,
+              sentAt: new Date().toISOString(),
+            }
+            : inv
+        )
+      );
+
+      // Immediately update React Query cache
+      queryClient.setQueryData<ProformaInvoice[]>(INVOICES_KEY, old =>
+        (old || []).map(inv =>
+          inv.id === invoiceId
+            ? {
+              ...inv,
+              taxInvoiceNumber: generatedTaxNo,
+              invoiceStatus: 'Sent' as any,
+              sentAt: new Date().toISOString(),
+            }
+            : inv
+        )
+      );
 
       setMessage('✓ Tax invoice generated successfully.');
       setJustGeneratedId(invoiceId);
@@ -135,7 +174,34 @@ export function InvoiceQueuePage() {
       setMessage(null);
       setSendingId(invoiceId);
 
-      await repositories.invoices.markSent(invoiceId, user.id);
+      const result = await repositories.invoices.markSent(invoiceId, user.id);
+      const generatedTaxNo = (result as any)?.taxInvoiceNumber;
+
+      setInvoices(prev =>
+        prev.map(inv =>
+          inv.id === invoiceId
+            ? {
+              ...inv,
+              taxInvoiceNumber: generatedTaxNo || inv.taxInvoiceNumber,
+              invoiceStatus: 'Sent' as any,
+              sentAt: new Date().toISOString(),
+            }
+            : inv
+        )
+      );
+
+      queryClient.setQueryData<ProformaInvoice[]>(INVOICES_KEY, old =>
+        (old || []).map(inv =>
+          inv.id === invoiceId
+            ? {
+              ...inv,
+              taxInvoiceNumber: generatedTaxNo || inv.taxInvoiceNumber,
+              invoiceStatus: 'Sent' as any,
+              sentAt: new Date().toISOString(),
+            }
+            : inv
+        )
+      );
 
       setMessage('✓ Invoice sent successfully.');
       await refresh();
@@ -143,6 +209,24 @@ export function InvoiceQueuePage() {
       setMessage('❌ Failed to send invoice.');
     } finally {
       setSendingId(null);
+    }
+  }
+
+  async function handleDownloadTaxInvoice(booking: StallBooking, invoice?: ProformaInvoice) {
+    try {
+      const { blob, fileName } = await apiClient.getBlob(
+        `/admin/events/current/bookings/${booking.id}/tax-invoice/download`
+      );
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName ?? `TaxInvoice_${invoice?.taxInvoiceNumber || booking.bookingRegistrationNumber}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      alert(err?.message || 'Failed to download tax invoice.');
     }
   }
 
@@ -172,15 +256,10 @@ export function InvoiceQueuePage() {
 
   return (
     <div>
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-extrabold">Invoice Queue</h2>
-          <p className="text-sm text-slate-500">
-            Generate tax invoice after payment verification and frozen stall.
-          </p>
-        </div>
-        <RefreshListButton onRefresh={refresh} />
-      </div>
+      <h2 className="text-2xl font-extrabold">Invoice Queue</h2>
+      <p className="text-sm text-slate-500">
+        Generate tax invoice after payment verification and frozen stall.
+      </p>
 
       <div className="mt-6">
         <section className="card p-5">
@@ -214,9 +293,12 @@ export function InvoiceQueuePage() {
               const sending = invoice ? sendingId === invoice.id : false;
               const baseAmount = Number(invoice?.totalAmount ?? 0) - Number(invoice?.gstAmount ?? 0);
               const isTenPercentTds = isSpecialTenPercentTdsBooking(booking);
-              const tdsRate = isTenPercentTds ? 0.10 : 0.02;
+              const hasTds = Boolean(invoice?.isTdsDeductable || (invoice?.tdsPercentage != null && invoice.tdsPercentage > 0) || isTenPercentTds);
+              const tdsPercent = (invoice?.tdsPercentage != null && invoice.tdsPercentage > 0)
+                ? invoice.tdsPercentage
+                : (isTenPercentTds ? 10 : 2);
+              const tdsRate = tdsPercent / 100;
               const tdsAmount = Math.round(baseAmount * tdsRate);
-              const hasTds = invoice?.isTdsDeductable || isTenPercentTds;
 
               return (
                 <div
@@ -275,7 +357,7 @@ export function InvoiceQueuePage() {
                         {hasTds && (
                           <>
                             <div>
-                              <p className="text-slate-500">TDS Deducted ({isTenPercentTds ? '10%' : '2%'})</p>
+                              <p className="text-slate-500">TDS Deducted ({tdsPercent}%)</p>
                               <p className="font-semibold text-red-600">
                                 - ₹{tdsAmount.toLocaleString('en-IN')}
                               </p>
@@ -295,7 +377,7 @@ export function InvoiceQueuePage() {
                   {invoice && justGeneratedId === invoice.id && (
                     <div className="mt-3 rounded-lg bg-blue-50 border border-blue-200 px-3 py-2 text-xs font-medium text-blue-700">
                       ✓ Invoice generated & emailed. Want to resend it? Use{' '}
-                      <span className="font-semibold">Send Invoice</span> below.
+                      <span className="font-semibold">Send Again</span> below.
                     </div>
                   )}
                   <div className="mt-4">
@@ -320,12 +402,26 @@ export function InvoiceQueuePage() {
                     )}
 
                     {stage === 'sent' && (
-                      <button
-                        className="btn-primary disabled:cursor-not-allowed disabled:opacity-50"
-                        disabled
-                      >
-                        ✓ Sent
-                      </button>
+                      <div className="flex flex-wrap items-center gap-2.5">
+                        <span className="inline-flex items-center gap-1 rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-2 text-xs font-bold text-emerald-700 shadow-xs">
+                          ✓ Sent
+                        </span>
+                        <button
+                          className="btn-secondary text-xs px-4 py-2 font-semibold shadow-xs disabled:cursor-not-allowed disabled:opacity-50"
+                          disabled={!canSend || !invoice || sending}
+                          onClick={() => invoice && sendInvoice(invoice.id)}
+                          title="Resend Tax Invoice email to exhibitor"
+                        >
+                          {sending ? 'Sending...' : 'Send Again'}
+                        </button>
+                        <button
+                          className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-xs transition-colors"
+                          onClick={() => handleDownloadTaxInvoice(booking, invoice)}
+                          title="Download Tax Invoice PDF"
+                        >
+                          📥 Download PDF
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>

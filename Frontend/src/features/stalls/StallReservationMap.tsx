@@ -272,6 +272,10 @@ export function StallReservationAllactionPage() {
     setStalls(matchingReservedStalls);
   }
 
+  useEffect(() => {
+    filterReservedStallsForBooking(selectedBooking, allReservedStalls);
+  }, [selectedBooking, allReservedStalls]);
+
   async function loadReservedStalls(): Promise<Stall[]> {
     const response = await apiClient.get<Stall[]>(
       `/admin/events/${eventId}/stall-reservations?tenantId=${tenantId}`
