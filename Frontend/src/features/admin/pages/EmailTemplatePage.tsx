@@ -36,7 +36,8 @@ import {
   Crown,
   AtSign,
   Layers,
-  Layers2
+  Layers2,
+  ArrowLeft
 } from 'lucide-react';
 import { PageHeader } from '../../../shared/components/PageHeader';
 import { RefreshListButton } from '../../../shared/components/RefreshListButton';
@@ -138,9 +139,27 @@ export function EmailTemplatePage({ mode = 'all' }: EmailTemplatePageProps = {})
     }
   }, [initialTemplates]);
 
-  // Lock body scroll when modal is open
+  // Confirmation Preview Modal State
+  const [showConfirmationModal, setShowConfirmationModal] = useState<boolean>(false);
+  const [confirmationDetails, setConfirmationDetails] = useState<{
+    actionType: 'save_only' | 'send_now';
+    effectiveName: string;
+    effectiveCode: string;
+    description: string;
+    subject: string;
+    bodyHtml: string;
+    renderedSubject: string;
+    renderedHtml: string;
+    recipientType: string;
+    recipientSummaryText: string;
+    recipientCount: number;
+    customEmails: string[];
+    selectedRecipientEmails: string[];
+  } | null>(null);
+
+  // Lock body scroll when either modal is open
   useEffect(() => {
-    if (showModal) {
+    if (showModal || showConfirmationModal) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = '';
@@ -148,7 +167,7 @@ export function EmailTemplatePage({ mode = 'all' }: EmailTemplatePageProps = {})
     return () => {
       document.body.style.overflow = '';
     };
-  }, [showModal]);
+  }, [showModal, showConfirmationModal]);
 
   // Search recipients auto-suggest
   useEffect(() => {
@@ -335,8 +354,8 @@ export function EmailTemplatePage({ mode = 'all' }: EmailTemplatePageProps = {})
     }
   };
 
-  // 1. SAVE TO DATABASE ONLY
-  const handleSaveTemplateToDb = async () => {
+  // Open Final Review & Confirmation Preview Modal
+  const handleOpenReviewModal = async () => {
     if (!subject.trim()) {
       alert('Please enter an Email Subject.');
       return;
@@ -349,112 +368,183 @@ export function EmailTemplatePage({ mode = 'all' }: EmailTemplatePageProps = {})
 
     if (!finalHtml.trim()) {
       alert('Please enter Email Body content.');
-      return;
-    }
-
-    const effectiveName = templateName.trim() || subject.trim();
-    const effectiveCode = templateCode.trim() || effectiveName.replace(/[^a-zA-Z0-9_]+/g, '_').toUpperCase();
-
-    try {
-      setIsProcessing(true);
-      setSuccessMessage('');
-      setErrorMessage('');
-
-      if (editingTemplateId && modalMode === 'edit') {
-        // Update existing template
-        const updated = await emailTemplateService.updateTemplate(editingTemplateId, {
-          name: effectiveName,
-          description: templateDescription.trim(),
-          subjectTemplate: subject.trim(),
-          bodyHtmlTemplate: finalHtml,
-          isActive
-        });
-        setTemplates(prev => prev.map(t => (t.id === updated.id ? updated : t)));
-        setSuccessMessage(`Template "${updated.name}" updated successfully in database!`);
-      } else {
-        // Create new template in DB
-        const created = await emailTemplateService.createTemplate({
-          templateCode: effectiveCode,
-          name: effectiveName,
-          description: templateDescription.trim() || 'Custom email template saved in database',
-          subjectTemplate: subject.trim(),
-          bodyHtmlTemplate: finalHtml,
-          isActive: true
-        });
-        setTemplates(prev => [created, ...prev]);
-        setSuccessMessage(`New Template "${created.name}" created and saved to database!`);
-      }
-
-      setTimeout(() => {
-        setShowModal(false);
-      }, 2000);
-    } catch (err: any) {
-      setErrorMessage(err?.message || 'Failed to save template to database.');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  // 2. SAVE TO DB & DISPATCH EMAILS NOW
-  const handleSaveAndSendEmail = async () => {
-    if (!subject.trim()) {
-      alert('Please enter an Email Subject.');
-      return;
-    }
-
-    let finalHtml = htmlContent;
-    if (activeTab === 'visual' && visualEditorRef.current) {
-      finalHtml = visualEditorRef.current.innerHTML;
-    }
-
-    if (!finalHtml.trim()) {
-      alert('Please enter Email Body content.');
-      return;
-    }
-
-    // Verify recipient selection
-    if (recipientType === 'custom_list' && customEmailTags.length === 0 && !customEmailsInput.trim()) {
-      alert('Please enter at least one recipient email address.');
-      return;
-    }
-
-    if (recipientType === 'selected_recipients' && selectedRecipients.length === 0) {
-      alert('Please select at least one contact.');
       return;
     }
 
     let allCustomEmails = [...customEmailTags];
     if (customEmailsInput.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customEmailsInput.trim())) {
-      allCustomEmails.push(customEmailsInput.trim().toLowerCase());
+      if (!allCustomEmails.includes(customEmailsInput.trim().toLowerCase())) {
+        allCustomEmails.push(customEmailsInput.trim().toLowerCase());
+      }
+    }
+
+    if (sendOption === 'send_now') {
+      if (recipientType === 'custom_list' && allCustomEmails.length === 0) {
+        alert('Please enter at least one recipient email address.');
+        return;
+      }
+      if (recipientType === 'selected_recipients' && selectedRecipients.length === 0) {
+        alert('Please select at least one contact.');
+        return;
+      }
     }
 
     const effectiveName = templateName.trim() || subject.trim();
     const effectiveCode = templateCode.trim() || effectiveName.replace(/[^a-zA-Z0-9_]+/g, '_').toUpperCase();
+
+    // Determine recipient summary text and count
+    let recipientSummaryText = 'No recipients (Save to Database Only)';
+    let recipientCount = 0;
+
+    if (sendOption === 'send_now') {
+      switch (recipientType) {
+        case 'all_exhibitors':
+          recipientCount = recipientSummary?.totalExhibitors || 0;
+          recipientSummaryText = `All Registered Exhibitors (${recipientCount} recipients)`;
+          break;
+        case 'allocated_exhibitors':
+          recipientCount = recipientSummary?.allocatedExhibitors || 0;
+          recipientSummaryText = `Allocated Stall Exhibitors (${recipientCount} recipients)`;
+          break;
+        case 'all_visitors':
+          recipientCount = recipientSummary?.totalVisitors || 0;
+          recipientSummaryText = `All Visitors (${recipientCount} recipients)`;
+          break;
+        case 'marketplace_buyers':
+          recipientCount = recipientSummary?.marketplaceBuyers || 0;
+          recipientSummaryText = `Marketplace Buyers (${recipientCount} recipients)`;
+          break;
+        case 'marketplace_sellers':
+          recipientCount = recipientSummary?.marketplaceSellers || 0;
+          recipientSummaryText = `Marketplace Sellers (${recipientCount} recipients)`;
+          break;
+        case 'vips':
+          recipientCount = recipientSummary?.totalVips || 0;
+          recipientSummaryText = `VIP Delegates (${recipientCount} recipients)`;
+          break;
+        case 'selected_recipients':
+          recipientCount = selectedRecipients.length;
+          recipientSummaryText = `Selected Contacts (${recipientCount} chosen: ${selectedRecipients.map(r => r.name).slice(0, 3).join(', ')}${selectedRecipients.length > 3 ? '...' : ''})`;
+          break;
+        case 'custom_list':
+          recipientCount = allCustomEmails.length;
+          recipientSummaryText = `Custom Email List (${recipientCount} emails: ${allCustomEmails.slice(0, 3).join(', ')}${allCustomEmails.length > 3 ? '...' : ''})`;
+          break;
+      }
+    }
+
+    // Render sample data for preview
+    let rSubject = subject.trim();
+    let rHtml = finalHtml;
+    try {
+      const previewRes = await emailTemplateService.previewTemplate({
+        templateCode: effectiveCode,
+        subjectTemplate: subject.trim(),
+        bodyHtmlTemplate: finalHtml,
+        sampleData: {
+          recipientName: 'Ramesh Kumar',
+          companyName: 'Acme Engineering Ltd',
+          stallNumber: 'A-102',
+          eventName: 'MSME Sangamam Connect - Hosur 2026',
+          email: 'ramesh@example.com'
+        }
+      });
+      rSubject = previewRes.renderedSubject;
+      rHtml = previewRes.renderedHtml;
+    } catch {
+      rSubject = subject.trim()
+        .replace(/{{recipientName}}/gi, 'Ramesh Kumar')
+        .replace(/{{companyName}}/gi, 'Acme Engineering Ltd')
+        .replace(/{{stallNumber}}/gi, 'A-102')
+        .replace(/{{eventName}}/gi, 'MSME Sangamam Connect - Hosur 2026')
+        .replace(/{{email}}/gi, 'ramesh@example.com');
+      rHtml = finalHtml
+        .replace(/{{recipientName}}/gi, 'Ramesh Kumar')
+        .replace(/{{companyName}}/gi, 'Acme Engineering Ltd')
+        .replace(/{{stallNumber}}/gi, 'A-102')
+        .replace(/{{eventName}}/gi, 'MSME Sangamam Connect - Hosur 2026')
+        .replace(/{{email}}/gi, 'ramesh@example.com');
+    }
+
+    setConfirmationDetails({
+      actionType: sendOption,
+      effectiveName,
+      effectiveCode,
+      description: templateDescription.trim(),
+      subject: subject.trim(),
+      bodyHtml: finalHtml,
+      renderedSubject: rSubject,
+      renderedHtml: rHtml,
+      recipientType,
+      recipientSummaryText,
+      recipientCount,
+      customEmails: allCustomEmails,
+      selectedRecipientEmails: selectedRecipients.map(r => r.email)
+    });
+
+    setSuccessMessage('');
+    setErrorMessage('');
+    setShowConfirmationModal(true);
+  };
+
+  // Execute Confirmed Save or Send Action
+  const handleExecuteConfirmedAction = async () => {
+    if (!confirmationDetails) return;
 
     try {
       setIsProcessing(true);
       setSuccessMessage('');
       setErrorMessage('');
 
-      const response = await emailTemplateService.sendCustomEmail({
-        recipientType,
-        customEmails: allCustomEmails,
-        selectedRecipientEmails: selectedRecipients.map(r => r.email),
-        subjectTemplate: subject.trim(),
-        bodyHtmlTemplate: finalHtml,
-        saveAsNewTemplate: true,
-        newTemplateName: effectiveName,
-        newTemplateCode: effectiveCode
-      });
+      if (confirmationDetails.actionType === 'save_only') {
+        if (editingTemplateId && modalMode === 'edit') {
+          // Update existing template
+          const updated = await emailTemplateService.updateTemplate(editingTemplateId, {
+            name: confirmationDetails.effectiveName,
+            description: confirmationDetails.description,
+            subjectTemplate: confirmationDetails.subject,
+            bodyHtmlTemplate: confirmationDetails.bodyHtml,
+            isActive
+          });
+          setTemplates(prev => prev.map(t => (t.id === updated.id ? updated : t)));
+          setSuccessMessage(`Template "${updated.name}" updated successfully in database!`);
+        } else {
+          // Create new template in DB
+          const created = await emailTemplateService.createTemplate({
+            templateCode: confirmationDetails.effectiveCode,
+            name: confirmationDetails.effectiveName,
+            description: confirmationDetails.description || 'Custom email template saved in database',
+            subjectTemplate: confirmationDetails.subject,
+            bodyHtmlTemplate: confirmationDetails.bodyHtml,
+            isActive: true
+          });
+          setTemplates(prev => [created, ...prev]);
+          setSuccessMessage(`New Template "${created.name}" created and saved to database!`);
+        }
+      } else {
+        // Save to DB & Send Custom Email Campaign
+        const response = await emailTemplateService.sendCustomEmail({
+          recipientType: confirmationDetails.recipientType as any,
+          customEmails: confirmationDetails.customEmails,
+          selectedRecipientEmails: confirmationDetails.selectedRecipientEmails,
+          subjectTemplate: confirmationDetails.subject,
+          bodyHtmlTemplate: confirmationDetails.bodyHtml,
+          saveAsNewTemplate: true,
+          newTemplateName: confirmationDetails.effectiveName,
+          newTemplateCode: confirmationDetails.effectiveCode
+        });
 
-      setSuccessMessage(`${response.message} (Template saved to database).`);
-      void refetch(); // refresh template list in UI
+        setSuccessMessage(`${response.message} (Template saved to database).`);
+        void refetch();
+      }
 
       setTimeout(() => {
+        setShowConfirmationModal(false);
         setShowModal(false);
-      }, 3000);
+        setConfirmationDetails(null);
+      }, 1800);
     } catch (err: any) {
-      setErrorMessage(err?.message || 'Failed to dispatch email campaign.');
+      setErrorMessage(err?.message || 'Failed to process email action.');
     } finally {
       setIsProcessing(false);
     }
@@ -1362,22 +1452,193 @@ export function EmailTemplatePage({ mode = 'all' }: EmailTemplatePageProps = {})
                   {sendOption === 'save_only' ? (
                     <button
                       type="button"
-                      onClick={handleSaveTemplateToDb}
+                      onClick={handleOpenReviewModal}
                       disabled={isProcessing}
-                      className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-6 py-2.5 text-xs font-bold text-white shadow-md hover:bg-emerald-700 transition disabled:opacity-50"
+                      className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-6 py-2.5 text-xs font-bold text-white shadow-md hover:bg-emerald-700 transition disabled:opacity-50 hover:scale-[1.02] active:scale-[0.98]"
                     >
-                      <Save size={15} className={isProcessing ? 'animate-spin' : ''} />
-                      {isProcessing ? 'Saving Template...' : 'Save Template in Database'}
+                      <Eye size={15} />
+                      Preview & Save Template
                     </button>
                   ) : (
                     <button
                       type="button"
-                      onClick={handleSaveAndSendEmail}
+                      onClick={handleOpenReviewModal}
                       disabled={isProcessing}
-                      className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-2.5 text-xs font-bold text-white shadow-md hover:from-blue-700 hover:to-indigo-700 transition disabled:opacity-50"
+                      className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-2.5 text-xs font-bold text-white shadow-md hover:from-blue-700 hover:to-indigo-700 transition disabled:opacity-50 hover:scale-[1.02] active:scale-[0.98]"
                     >
-                      <Send size={15} className={isProcessing ? 'animate-spin' : ''} />
-                      {isProcessing ? 'Dispatching & Saving...' : 'Save to DB & Send Email Now'}
+                      <Eye size={15} />
+                      Preview & Send Email Now
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
+
+      {/* ========================================================================= */}
+      {/* FINAL PREVIEW & CONFIRMATION MODAL BEFORE SAVING / DISPATCHING */}
+      {/* ========================================================================= */}
+      {showConfirmationModal && confirmationDetails &&
+        createPortal(
+          <div className="fixed inset-0 z-[999999] flex items-center justify-center bg-slate-950/85 p-3 sm:p-5 backdrop-blur-md overflow-hidden">
+            <div className="flex h-[90vh] max-h-[860px] w-full max-w-4xl flex-col rounded-3xl border border-slate-200 bg-white shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 my-auto">
+              
+              {/* Modal Header */}
+              <div className={`shrink-0 flex items-center justify-between border-b px-6 py-4 text-white ${
+                confirmationDetails.actionType === 'save_only'
+                  ? 'bg-gradient-to-r from-emerald-800 via-teal-900 to-emerald-950 border-emerald-700'
+                  : 'bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 border-indigo-700'
+              }`}>
+                <div className="flex items-center gap-3">
+                  <div className="rounded-xl bg-white/10 p-2.5 backdrop-blur-md">
+                    {confirmationDetails.actionType === 'save_only' ? <Save size={22} className="text-emerald-300" /> : <Send size={22} className="text-blue-300" />}
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold">
+                      {confirmationDetails.actionType === 'save_only'
+                        ? 'Confirm & Save Email Template'
+                        : 'Review & Dispatch Email Campaign'}
+                    </h2>
+                    <p className="text-xs text-slate-300">
+                      {confirmationDetails.actionType === 'save_only'
+                        ? 'Please verify the final rendered template before saving to the database.'
+                        : 'Please verify the email preview and target recipients before dispatching.'}
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmationModal(false)}
+                  disabled={isProcessing}
+                  className="rounded-xl p-2 text-white/70 hover:bg-white/10 hover:text-white transition"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Modal Scrollable Body */}
+              <div className="flex-1 min-h-0 overflow-y-auto p-5 sm:p-6 space-y-4">
+                {/* Alerts */}
+                {successMessage && (
+                  <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-800 text-sm flex items-center gap-3 shadow-sm">
+                    <CheckCircle2 size={18} className="text-emerald-600 shrink-0" />
+                    <span className="font-semibold">{successMessage}</span>
+                  </div>
+                )}
+                {errorMessage && (
+                  <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-rose-800 text-sm flex items-center gap-3 shadow-sm">
+                    <AlertCircle size={18} className="text-rose-600 shrink-0" />
+                    <span className="font-semibold">{errorMessage}</span>
+                  </div>
+                )}
+
+                {/* Key Summary Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3.5 space-y-1.5">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Template Details</span>
+                    <p className="text-sm font-bold text-slate-900">{confirmationDetails.effectiveName}</p>
+                    <p className="text-xs font-mono text-slate-600 font-semibold bg-white px-2 py-0.5 rounded-md inline-block border border-slate-200">
+                      Code: {confirmationDetails.effectiveCode}
+                    </p>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3.5 space-y-1.5">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Action & Recipient Target</span>
+                    <div>
+                      {confirmationDetails.actionType === 'save_only' ? (
+                        <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-100/70 border border-emerald-300 px-2.5 py-1 rounded-lg">
+                          <Save size={13} /> Save to Database Only (No Emails Sent)
+                        </span>
+                      ) : (
+                        <div className="space-y-1">
+                          <span className="inline-flex items-center gap-1 text-xs font-bold text-blue-700 bg-blue-100 border border-blue-300 px-2.5 py-0.5 rounded-lg">
+                            <Send size={13} /> Save to DB & Dispatch
+                          </span>
+                          <p className="text-xs font-bold text-slate-800 pt-0.5">
+                            Target: <span className="text-msme-blue">{confirmationDetails.recipientSummaryText}</span>
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Email Subject Review */}
+                <div className="rounded-2xl border border-blue-100 bg-blue-50/50 p-3.5">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-blue-800">Email Subject Line:</span>
+                  <p className="text-sm font-bold text-slate-900 mt-0.5 break-words">
+                    {confirmationDetails.renderedSubject || confirmationDetails.subject}
+                  </p>
+                </div>
+
+                {/* Full Rendered Preview Frame */}
+                <div className="rounded-2xl border border-slate-300 bg-slate-100 p-4 shadow-inner">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1.5">
+                      <Eye size={14} className="text-msme-blue" />
+                      Final Email Preview (Sample Render)
+                    </span>
+                    <span className="text-[11px] text-slate-400 font-medium">
+                      Live HTML Output
+                    </span>
+                  </div>
+
+                  <div className="bg-white rounded-2xl border border-slate-200 shadow-md overflow-hidden">
+                    <div className="border-b border-slate-200 bg-slate-50 p-3 text-xs space-y-1 text-slate-600">
+                      <div className="flex justify-between text-slate-400 text-[10px]">
+                        <span>From: <strong>MSME Sangamam Connect &lt;noreply@msmesangamam.com&gt;</strong></span>
+                        <span>Sample Delivery</span>
+                      </div>
+                      <div className="text-[11px] text-slate-500 truncate">
+                        To: <strong className="text-slate-700">Ramesh Kumar &lt;ramesh@example.com&gt;</strong>
+                      </div>
+                      <div className="font-bold text-slate-900 text-xs pt-1 truncate">
+                        Subject: {confirmationDetails.renderedSubject || confirmationDetails.subject}
+                      </div>
+                    </div>
+
+                    <div
+                      className="p-5 bg-white text-xs overflow-x-auto max-h-[380px] overflow-y-auto"
+                      dangerouslySetInnerHTML={{ __html: confirmationDetails.renderedHtml || confirmationDetails.bodyHtml }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Footer Actions */}
+              <div className="shrink-0 flex items-center justify-between border-t border-slate-200 bg-slate-50/95 px-6 py-4 shadow-xs">
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmationModal(false)}
+                  disabled={isProcessing}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-100 transition shadow-xs"
+                >
+                  <ArrowLeft size={14} /> Back to Composer
+                </button>
+
+                <div className="flex items-center gap-3">
+                  {confirmationDetails.actionType === 'save_only' ? (
+                    <button
+                      type="button"
+                      onClick={handleExecuteConfirmedAction}
+                      disabled={isProcessing}
+                      className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-6 py-2.5 text-xs font-bold text-white shadow-md hover:bg-emerald-700 transition disabled:opacity-50 hover:scale-[1.02] active:scale-[0.98]"
+                    >
+                      <Check size={16} className={isProcessing ? 'animate-spin' : ''} />
+                      {isProcessing ? 'Saving to Database...' : 'Confirm & Save to Database'}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleExecuteConfirmedAction}
+                      disabled={isProcessing}
+                      className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 px-6 py-2.5 text-xs font-bold text-white shadow-md hover:from-blue-700 hover:to-indigo-700 transition disabled:opacity-50 hover:scale-[1.02] active:scale-[0.98]"
+                    >
+                      <Send size={16} className={isProcessing ? 'animate-spin' : ''} />
+                      {isProcessing ? 'Dispatching & Saving...' : 'Confirm & Dispatch Email Now'}
                     </button>
                   )}
                 </div>

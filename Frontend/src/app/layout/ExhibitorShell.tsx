@@ -16,7 +16,7 @@ import {
   MailCheck,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { exhibitorApiClient, getExhibitorProfile, setExhibitorSession } from '../../data/api/exhibitorApiClient';
+import { exhibitorApiClient, getExhibitorProfile, getExhibitorToken, setExhibitorSession } from '../../data/api/exhibitorApiClient';
 import { SidebarDigitalPartnerFooter } from '../../components/BaseComponents/SidebarDigitalPartnerFooter';
 
 interface ExhibitorMe {
@@ -36,7 +36,17 @@ export function ExhibitorShell() {
   useEffect(() => {
     exhibitorApiClient
       .get<ExhibitorMe>('/exhibitor/me')
-      .then((data) => setMe(data))
+      .then((data) => {
+        setMe(data);
+        if (data && data.registrationNumber) {
+          const token = getExhibitorToken();
+          setExhibitorSession(token, {
+            companyName: data.companyName,
+            registrationNumber: data.registrationNumber,
+            stallNumber: data.stallNumber
+          });
+        }
+      })
       .catch(() => { });
   }, []);
 

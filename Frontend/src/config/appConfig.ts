@@ -5,7 +5,7 @@ const LOCAL = 'https://localhost:53946/api/v1'
 const DEV = 'https://stall.atribsglobal.com/api/v1'
 export const appConfig = {
   dataMode: ((import.meta.env.VITE_DATA_MODE as DataMode | undefined) ?? 'api'),
-  apiBaseUrl: DEV,
+  apiBaseUrl: LOCAL,
   defaultEventCode: import.meta.env.VITE_DEFAULT_EVENT_CODE ?? 'MSME-HOSUR-2026'
 } as const;
 

@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams, useLocation } from 'react-router-do
 import { AlertCircle, CheckCircle2, X, ShoppingBag, Store, Presentation, Users, Shield, ArrowLeft, UserCheck, ShieldCheck, UserPlus, ArrowRight } from 'lucide-react';
 import { repositories } from '../../data/repositoryFactory';
 import { useSession } from '../../app/session';
-import { exhibitorApiClient, setExhibitorToken, ExhibitorApiError } from '../../data/api/exhibitorApiClient';
+import { exhibitorApiClient, setExhibitorToken, setExhibitorSession, ExhibitorApiError } from '../../data/api/exhibitorApiClient';
 import { visitorApiClient, setVisitorSession, VisitorApiError } from '../../data/api/visitorApiClient';
 import { BrandHeader } from '../../shared/components/BrandHeader';
 import { FloatingSupportFooter } from '../../components/BaseComponents/FloatingSupportFooter';
@@ -100,13 +100,26 @@ export function LoginPage() {
         }
 
         if (selectedRole === 'EXHIBITOR') {
-          const result = await exhibitorApiClient.post<{ token: string }>('/public/exhibitor/login', {
+          const result = await exhibitorApiClient.post<{
+            token: string;
+            companyName?: string;
+            tradeName?: string;
+            legalName?: string;
+            registrationNumber?: string;
+            fasciaName?: string;
+          }>('/public/exhibitor/login', {
             registrationNumber: registrationNumber.trim(),
             mobile: mobile.trim()
           });
-          setExhibitorToken(result.token);
+          const compName = result.companyName || result.legalName || result.tradeName || 'Exhibitor';
+          const regNum = result.registrationNumber || registrationNumber.trim();
+          setExhibitorSession(result.token, {
+            companyName: compName,
+            registrationNumber: regNum,
+            stallNumber: null
+          });
           setPopup({ type: 'success', title: 'Login Successful', message: 'Redirecting to Exhibitor Portal...' });
-          setTimeout(() => navigate('/exhibitor/dashboard'), 1200);
+          setTimeout(() => navigate('/exhibitorShell/Dashboard'), 1200);
         } else {
           const result = await visitorApiClient.post<{
             token: string;

@@ -326,21 +326,14 @@ export function StallProfilePage({
       href: `mailto:${company.email}`,
       external: false,
     },
-
-    locationLine && {
-      icon: MapPin,
-      label: 'Location',
-      href: `https://maps.google.com/?q=${encodeURIComponent(
-        locationLine
-      )}`,
-      external: true,
-    },
   ].filter(Boolean) as {
     icon: typeof Phone;
     label: string;
     href: string;
     external: boolean;
-  }[];  // =========================
+  }[];
+
+  // =========================
   // MAIN CARD CONTENT
   // =========================
   const cardContent = (
@@ -493,27 +486,37 @@ export function StallProfilePage({
 
           {/* Address Info */}
           {locationLine && (
-            <div className="mt-3 rounded-xl border border-slate-200 p-2.5">
-              <span className="flex items-center gap-1.5 text-xs font-semibold text-slate-500">
-                <MapPin className="h-3.5 w-3.5 shrink-0 text-[#0B3B75]" />
-                Location
-              </span>
-
-              <p className="mt-1 text-xs text-slate-700">
-                {locationLine}
-              </p>
+            <div className="mt-3 rounded-xl border border-slate-200 p-2.5 flex items-start justify-between gap-2">
+              <div>
+                <span className="flex items-center gap-1.5 text-xs font-semibold text-slate-500">
+                  <MapPin className="h-3.5 w-3.5 shrink-0 text-[#0B3B75]" />
+                  Location
+                </span>
+                <p className="mt-0.5 text-xs text-slate-700">
+                  {locationLine}
+                </p>
+              </div>
+              <a
+                href={`https://maps.google.com/?q=${encodeURIComponent(locationLine)}`}
+                target="_blank"
+                rel="noreferrer"
+                className="text-[11px] font-bold text-[#0B3B75] hover:underline shrink-0 mt-0.5 bg-blue-50 px-2 py-0.5 rounded-md"
+              >
+                Map ↗
+              </a>
             </div>
           )}
 
           {/* Quick Contact Buttons */}
           {contactLinks.length > 0 && (
             <div
-              className={`mt-3 grid gap-2 ${isModal && contactLinks.length >= 3
-                ? 'grid-cols-3'
-                : contactLinks.length > 2
-                  ? 'grid-cols-2 sm:grid-cols-3'
-                  : 'grid-cols-2'
-                }`}
+              className={`mt-3 grid gap-2 ${
+                contactLinks.length === 3
+                  ? 'grid-cols-3'
+                  : contactLinks.length === 2
+                  ? 'grid-cols-2'
+                  : 'grid-cols-1'
+              }`}
             >
               {contactLinks.map((item) =>
                 item.external ? (
@@ -670,32 +673,34 @@ export function StallProfilePage({
   if (isModal) {
     const modalElement = (
       <div
-        className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/70 p-3 sm:p-5 backdrop-blur-sm"
+        className="fixed inset-0 z-[99999] overflow-y-auto bg-slate-950/70 p-3 sm:py-8 backdrop-blur-sm"
         onClick={onClose}
       >
-        <div
-          className="relative max-h-[90vh] w-full max-w-[480px] overflow-y-auto rounded-3xl bg-slate-50 p-3.5 sm:p-5 shadow-2xl"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {/* Modal Header Bar */}
-          <div className="mb-2.5 flex items-center justify-between px-1">
-            <div className="flex items-center gap-2">
-              <span className="inline-block h-2 w-2 rounded-full bg-[#0B3B75]" />
-              <span className="text-xs font-extrabold uppercase tracking-wider text-slate-500">
-                Stall Profile Preview
-              </span>
+        <div className="flex min-h-full items-center justify-center">
+          <div
+            className="relative w-full max-w-[440px] rounded-3xl bg-slate-50 p-3.5 sm:p-5 shadow-2xl my-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header Bar */}
+            <div className="mb-2.5 flex items-center justify-between px-1">
+              <div className="flex items-center gap-2">
+                <span className="inline-block h-2 w-2 rounded-full bg-[#0B3B75]" />
+                <span className="text-xs font-extrabold uppercase tracking-wider text-slate-600">
+                  Stall Profile Preview
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="Close"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-200/80 text-slate-600 transition hover:bg-slate-300 hover:text-slate-900 cursor-pointer"
+              >
+                <X size={16} />
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="Close"
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-200/80 text-slate-600 transition hover:bg-slate-300 hover:text-slate-900 cursor-pointer"
-            >
-              <X size={16} />
-            </button>
-          </div>
 
-          {cardContent}
+            {cardContent}
+          </div>
         </div>
       </div>
     );
