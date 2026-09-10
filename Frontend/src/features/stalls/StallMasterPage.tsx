@@ -1,20 +1,15 @@
-import {
-  FormEvent,
-  useEffect,
-  useMemo,
-  useState,
-} from 'react';
+import { FormEvent, useEffect, useMemo, useState } from "react";
 
-import type { Stall, StallStatus } from '../../domain/models';
-import { StatusBadge } from '../../shared/StatusBadge';
-import { PageHeader } from '../../shared/components/PageHeader';
-import { apiClient } from '../../data/api/apiClient';
-import { appConfig } from '../../config/appConfig';
-import { StallMaster } from '../../data/api/ApiRepositories';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { RefreshListButton } from '../../shared/components/RefreshListButton';
-const STALLS_KEY = ['admin', 'stalls'] as const;
-const STALL_SIZES_KEY = ['public', 'stall-sizes'] as const;
+import type { Stall, StallStatus } from "../../domain/models";
+import { StatusBadge } from "../../shared/StatusBadge";
+import { PageHeader } from "../../shared/components/PageHeader";
+import { apiClient } from "../../data/api/apiClient";
+import { appConfig } from "../../config/appConfig";
+import { StallMaster } from "../../data/api/ApiRepositories";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { RefreshListButton } from "../../shared/components/RefreshListButton";
+const STALLS_KEY = ["admin", "stalls"] as const;
+const STALL_SIZES_KEY = ["public", "stall-sizes"] as const;
 type ReleaseBlockResponse = {
   message: string;
   bookingId: string;
@@ -27,8 +22,8 @@ type ReleaseBlockResponse = {
   releaseReason: string;
 };
 
-type SortDirection = 'asc' | 'desc';
-type SortField = 'stallNumber' | 'stallSize' | 'status';
+type SortDirection = "asc" | "desc";
+type SortField = "stallNumber" | "stallSize" | "status";
 export interface StallSizeOption {
   id: string;
   code: string;
@@ -77,14 +72,14 @@ type ApiError = {
 };
 
 const initialForm: StallForm = {
-  StallNumber: '',
-  HallName: '',
-  StallSizeId: '',
-  ZoneName: '',
+  StallNumber: "",
+  HallName: "",
+  StallSizeId: "",
+  ZoneName: "",
   LayoutX: 0,
   LayoutY: 0,
-  RowLabel: '',
-  FloorLabel: '',
+  RowLabel: "",
+  FloorLabel: "",
   IsActive: true,
 };
 
@@ -93,26 +88,23 @@ export function StallMasterPage() {
    * Replace these temporary IDs with values from your
    * authenticated user/session store.
    */
-  const tenantId =
-    '11111111-1111-1111-1111-111111111111';
+  const tenantId = "11111111-1111-1111-1111-111111111111";
 
-  const eventId =
-    '22222222-2222-2222-2222-222222222222';
+  const eventId = "22222222-2222-2222-2222-222222222222";
 
-  const actorUserId =
-    '40bb01d6-fa5d-4318-9775-e9d5792a222b';
+  const actorUserId = "40bb01d6-fa5d-4318-9775-e9d5792a222b";
   const queryClient = useQueryClient();
-  const stallMaster = useMemo(
-    () => new StallMaster(),
-    []
-  );
+  const stallMaster = useMemo(() => new StallMaster(), []);
   const { data: stallsData = [] } = useQuery({
     queryKey: STALLS_KEY,
     queryFn: () => stallMaster.list(),
   });
   const { data: stallSizesData = [] } = useQuery({
     queryKey: STALL_SIZES_KEY,
-    queryFn: () => apiClient.get<StallSizeOption[]>(`/public/events/${appConfig.defaultEventCode}/stall-sizes`),
+    queryFn: () =>
+      apiClient.get<StallSizeOption[]>(
+        `/public/events/${appConfig.defaultEventCode}/stall-sizes`,
+      ),
     gcTime: 30 * 60_000,
   });
   const [stalls, setStalls] = useState<Stall[]>([]);
@@ -123,124 +115,112 @@ export function StallMasterPage() {
   useEffect(() => {
     if (stallSizesData.length > 0) setStallSizes(stallSizesData);
   }, [stallSizesData]);
-  const [status, setStatus] = useState<'All' | StallStatus>('All');
-  const [search, setSearch] = useState('');
-  const [selectedStallSizeId, setSelectedStallSizeId] = useState('All');
-  const [selectedStallNumber, setSelectedStallNumber] = useState('All');
+  const [status, setStatus] = useState<"All" | StallStatus>("All");
+  const [search, setSearch] = useState("");
+  const [selectedStallSizeId, setSelectedStallSizeId] = useState("All");
+  const [selectedStallNumber, setSelectedStallNumber] = useState("All");
 
-  const [selectedStallId, setSelectedStallId] =
-    useState('');
-  const [availableStalls, setAvailableStalls] =
-    useState<StallPreferenceOption[]>([]);
-  const [form, setForm] =
-    useState<StallForm>(initialForm);
+  const [selectedStallId, setSelectedStallId] = useState("");
+  const [availableStalls, setAvailableStalls] = useState<
+    StallPreferenceOption[]
+  >([]);
+  const [form, setForm] = useState<StallForm>(initialForm);
 
   const [saving, setSaving] = useState(false);
 
-  const [processingStallId, setProcessingStallId] =
-    useState<string | null>(null);
+  const [processingStallId, setProcessingStallId] = useState<string | null>(
+    null,
+  );
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [sortField, setSortField] = useState<'stallNumber' | 'stallSize' | 'status'>('stallNumber');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [sortField, setSortField] = useState<
+    "stallNumber" | "stallSize" | "status"
+  >("stallNumber");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   useEffect(() => {
     if (!selectedStallSizeId) {
       setAvailableStalls([]);
-      setSelectedStallId('');
+      setSelectedStallId("");
       return;
     }
 
     apiClient
       .get<StallPreferenceOption[]>(
         `/public/events/${appConfig.defaultEventCode}/stalls?stallSizeId=${encodeURIComponent(
-          selectedStallSizeId
-        )}`
+          selectedStallSizeId,
+        )}`,
       )
-      .then(data => {
+      .then((data) => {
         setAvailableStalls(data ?? []);
-        setSelectedStallId('');
+        setSelectedStallId("");
       })
       .catch(() => {
         setAvailableStalls([]);
-        setSelectedStallId('');
+        setSelectedStallId("");
       });
   }, [selectedStallSizeId]);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
-
-
-  const getErrorMessage = (
-    currentError: unknown,
-    fallback: string
-  ): string => {
+  const getErrorMessage = (currentError: unknown, fallback: string): string => {
     const apiError = currentError as ApiError;
 
-    return (
-      apiError?.response?.data?.message ??
-      apiError?.message ??
-      fallback
-    );
+    return apiError?.response?.data?.message ?? apiError?.message ?? fallback;
   };
 
   const loadStalls = async () => {
     try {
-      setError('');
+      setError("");
 
       const data = await stallMaster.list();
 
       setStalls(data);
       queryClient.setQueryData(STALLS_KEY, data);
-      queryClient.invalidateQueries({ queryKey: ['stalls'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+      queryClient.invalidateQueries({ queryKey: ["stalls"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["bookings"] });
     } catch (currentError) {
       console.error(currentError);
 
-      setError(
-        getErrorMessage(
-          currentError,
-          'Unable to load stalls.'
-        )
-      );
+      setError(getErrorMessage(currentError, "Unable to load stalls."));
     }
   };
-  const unblockStall = async (
-    stallId: string,
-    bookingId: string | null
-  ) => {
+  const unblockStall = async (stallId: string, bookingId: string | null) => {
     if (!bookingId) {
-      setError('This blocked stall is not linked to a booking.');
+      setError("This blocked stall is not linked to a booking.");
       return;
     }
 
     try {
       setProcessingStallId(stallId);
-      setError('');
-      setSuccess('');
+      setError("");
+      setSuccess("");
 
       // Optimistic instant UI update
-      setStalls(prev =>
-        prev.map(s =>
+      setStalls((prev) =>
+        prev.map((s) =>
           s.id === stallId
-            ? { ...s, currentStatus: 'Available' as StallStatus, currentBookingId: null }
-            : s
-        )
+            ? {
+                ...s,
+                currentStatus: "Available" as StallStatus,
+                currentBookingId: null,
+              }
+            : s,
+        ),
       );
 
-      const response =
-        await apiClient.post<ReleaseBlockResponse>(
-          `/admin/events/${eventId}/bookings/${bookingId}/stalls/${stallId}/release-block`,
-          {
-            tenantId,
-            actorUserId,
-            reason: 'Blocked stall manually released from Stall Master.',
-          }
-        );
+      const response = await apiClient.post<ReleaseBlockResponse>(
+        `/admin/events/${eventId}/bookings/${bookingId}/stalls/${stallId}/release-block`,
+        {
+          tenantId,
+          actorUserId,
+          reason: "Blocked stall manually released from Stall Master.",
+        },
+      );
 
       setSuccess(
         response?.message ??
-        'Blocked stall released and booking moved to Submitted successfully.'
+          "Blocked stall released and booking moved to Submitted successfully.",
       );
 
       await loadStalls();
@@ -248,10 +228,7 @@ export function StallMasterPage() {
       console.error(currentError);
 
       setError(
-        getErrorMessage(
-          currentError,
-          'Unable to release blocked stall.'
-        )
+        getErrorMessage(currentError, "Unable to release blocked stall."),
       );
       await loadStalls();
     } finally {
@@ -262,7 +239,7 @@ export function StallMasterPage() {
   const loadStallSizes = async () => {
     try {
       const data = await apiClient.get<StallSizeOption[]>(
-        `/public/events/${appConfig.defaultEventCode}/stall-sizes`
+        `/public/events/${appConfig.defaultEventCode}/stall-sizes`,
       );
 
       setStallSizes(data);
@@ -273,8 +250,8 @@ export function StallMasterPage() {
       setError(
         getErrorMessage(
           currentError,
-          'Unable to load stall sizes. Please try again or contact the organising team.'
-        )
+          "Unable to load stall sizes. Please try again or contact the organising team.",
+        ),
       );
     }
   };
@@ -285,21 +262,14 @@ export function StallMasterPage() {
       stallSize?: { id?: string | null } | null;
     };
 
-    return (
-      value.stallSizeId ??
-      value.StallSizeId ??
-      value.stallSize?.id ??
-      ''
-    );
+    return value.stallSizeId ?? value.StallSizeId ?? value.stallSize?.id ?? "";
   };
 
   const getStallSizeLabel = (stall: Stall): string => {
     const stallSizeId = getStallSizeId(stall);
-    const size = stallSizes.find(item => item.id === stallSizeId);
+    const size = stallSizes.find((item) => item.id === stallSizeId);
 
-    return size
-      ? `${size.code} - ${size.displayName}`
-      : '—';
+    return size ? `${size.code} - ${size.displayName}` : "—";
   };
 
   // const stallNumberOptions = useMemo(() => {
@@ -319,50 +289,46 @@ export function StallMasterPage() {
   const filtered = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
 
-    const result = [...stalls].filter(stall => {
-      const matchesStatus =
-        status === 'All' || stall.currentStatus === status;
+    const result = [...stalls].filter((stall) => {
+      const matchesStatus = status === "All" || stall.currentStatus === status;
 
       const matchesSearch =
         !normalizedSearch ||
         stall.stallNumber.toLowerCase().includes(normalizedSearch);
 
       const matchesStallSize =
-        selectedStallSizeId === 'All' ||
+        selectedStallSizeId === "All" ||
         getStallSizeId(stall) === selectedStallSizeId;
 
       const matchesStallNumber =
-        selectedStallNumber === 'All' ||
+        selectedStallNumber === "All" ||
         stall.stallNumber === selectedStallNumber;
 
       return (
-        matchesStatus &&
-        matchesSearch &&
-        matchesStallSize &&
-        matchesStallNumber
+        matchesStatus && matchesSearch && matchesStallSize && matchesStallNumber
       );
     });
 
     result.sort((first, second) => {
       let compareResult = 0;
 
-      if (sortField === 'stallNumber') {
+      if (sortField === "stallNumber") {
         compareResult = first.stallNumber.localeCompare(
           second.stallNumber,
           undefined,
-          { numeric: true, sensitivity: 'base' }
+          { numeric: true, sensitivity: "base" },
         );
-      } else if (sortField === 'stallSize') {
+      } else if (sortField === "stallSize") {
         compareResult = getStallSizeLabel(first).localeCompare(
           getStallSizeLabel(second),
           undefined,
-          { numeric: true, sensitivity: 'base' }
+          { numeric: true, sensitivity: "base" },
         );
-      } else if (sortField === 'status') {
+      } else if (sortField === "status") {
         compareResult = first.currentStatus.localeCompare(second.currentStatus);
       }
 
-      return sortDirection === 'asc' ? compareResult : -compareResult;
+      return sortDirection === "asc" ? compareResult : -compareResult;
     });
 
     return result;
@@ -378,36 +344,35 @@ export function StallMasterPage() {
   ]);
   const stallNumberOptions = useMemo(() => {
     return [...stalls]
-      .filter(stall => {
+      .filter((stall) => {
         return (
-          selectedStallSizeId === 'All' ||
+          selectedStallSizeId === "All" ||
           getStallSizeId(stall) === selectedStallSizeId
         );
       })
-      .map(stall => stall.stallNumber)
+      .map((stall) => stall.stallNumber)
       .filter(
-        (stallNumber, index, values) =>
-          values.indexOf(stallNumber) === index
+        (stallNumber, index, values) => values.indexOf(stallNumber) === index,
       )
       .sort((first, second) =>
         first.localeCompare(second, undefined, {
           numeric: true,
-          sensitivity: 'base',
-        })
+          sensitivity: "base",
+        }),
       );
   }, [stalls, selectedStallSizeId]);
   const clearFilters = () => {
-    setSearch('');
-    setStatus('All');
-    setSelectedStallSizeId('All');
-    setSelectedStallNumber('All');
+    setSearch("");
+    setStatus("All");
+    setSelectedStallSizeId("All");
+    setSelectedStallNumber("All");
   };
-  const toggleSort = (field: 'stallNumber' | 'stallSize' | 'status') => {
+  const toggleSort = (field: "stallNumber" | "stallSize" | "status") => {
     if (sortField === field) {
-      setSortDirection(previous => (previous === 'asc' ? 'desc' : 'asc'));
+      setSortDirection((previous) => (previous === "asc" ? "desc" : "asc"));
     } else {
       setSortField(field);
-      setSortDirection('asc');
+      setSortDirection("asc");
     }
   };
   useEffect(() => {
@@ -415,9 +380,9 @@ export function StallMasterPage() {
   }, [search, status, selectedStallSizeId, selectedStallNumber]);
   const setField = (
     name: keyof StallForm,
-    value: string | number | boolean
+    value: string | number | boolean,
   ) => {
-    setForm(previous => ({
+    setForm((previous) => ({
       ...previous,
       [name]: value,
     }));
@@ -429,31 +394,31 @@ export function StallMasterPage() {
         counts.total += 1;
 
         switch (stall.currentStatus) {
-          case 'Available':
+          case "Available":
             counts.available += 1;
             break;
 
-          case 'Reservation':
+          case "Reservation":
             counts.reservation += 1;
             break;
 
-          case 'Blocked':
+          case "Blocked":
             counts.blocked += 1;
             break;
 
-          case 'Frozen':
+          case "Frozen":
             counts.frozen += 1;
             break;
 
-          case 'Released':
+          case "Released":
             counts.released += 1;
             break;
 
-          case 'Cancelled':
+          case "Cancelled":
             counts.cancelled += 1;
             break;
 
-          case 'Disabled':
+          case "Disabled":
             counts.disabled += 1;
             break;
         }
@@ -469,7 +434,7 @@ export function StallMasterPage() {
         released: 0,
         cancelled: 0,
         disabled: 0,
-      }
+      },
     );
   }, [filtered]);
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
@@ -478,37 +443,31 @@ export function StallMasterPage() {
     const startIndex = (currentPage - 1) * pageSize;
     return filtered.slice(startIndex, startIndex + pageSize);
   }, [filtered, currentPage]);
-  const createStall = async (
-    event: FormEvent<HTMLFormElement>
-  ) => {
+  const createStall = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    setError('');
-    setSuccess('');
+    setError("");
+    setSuccess("");
 
     if (!form.StallSizeId) {
-      setError('Please select a stall size.');
+      setError("Please select a stall size.");
       return;
     }
 
     if (!form.StallNumber.trim()) {
-      setError('Please enter the stall number.');
+      setError("Please enter the stall number.");
       return;
     }
 
     const payload: StallForm = {
       StallSizeId: form.StallSizeId,
       StallNumber: form.StallNumber.trim(),
-      HallName: form.HallName?.trim() || '',
-      ZoneName: form.ZoneName?.trim() || '',
-      RowLabel: form.RowLabel?.trim() || '',
-      FloorLabel: form.FloorLabel?.trim() || '',
-      LayoutX: form.LayoutX
-        ? Number(form.LayoutX)
-        : undefined,
-      LayoutY: form.LayoutY
-        ? Number(form.LayoutY)
-        : undefined,
+      HallName: form.HallName?.trim() || "",
+      ZoneName: form.ZoneName?.trim() || "",
+      RowLabel: form.RowLabel?.trim() || "",
+      FloorLabel: form.FloorLabel?.trim() || "",
+      LayoutX: form.LayoutX ? Number(form.LayoutX) : undefined,
+      LayoutY: form.LayoutY ? Number(form.LayoutY) : undefined,
       IsActive: true,
     };
 
@@ -520,16 +479,11 @@ export function StallMasterPage() {
       await loadStalls();
 
       setForm(initialForm);
-      setSuccess('Stall created successfully.');
+      setSuccess("Stall created successfully.");
     } catch (currentError) {
       console.error(currentError);
 
-      setError(
-        getErrorMessage(
-          currentError,
-          'Unable to create stall.'
-        )
-      );
+      setError(getErrorMessage(currentError, "Unable to create stall."));
     } finally {
       setSaving(false);
     }
@@ -538,42 +492,33 @@ export function StallMasterPage() {
   const reserveStall = async (stallId: string) => {
     try {
       setProcessingStallId(stallId);
-      setError('');
-      setSuccess('');
+      setError("");
+      setSuccess("");
 
       // Optimistic instant UI update
-      setStalls(prev =>
-        prev.map(s =>
+      setStalls((prev) =>
+        prev.map((s) =>
           s.id === stallId
-            ? { ...s, currentStatus: 'Reservation' as StallStatus }
-            : s
-        )
+            ? { ...s, currentStatus: "Reservation" as StallStatus }
+            : s,
+        ),
       );
 
-      const response =
-        await apiClient.post<ReservationResponse>(
-          `/admin/events/${eventId}/stall-reservations/${stallId}/reserve`,
-          {
-            tenantId,
-            actorUserId,
-          }
-        );
-
-      setSuccess(
-        response?.message ??
-        'Stall reserved successfully.'
+      const response = await apiClient.post<ReservationResponse>(
+        `/admin/events/${eventId}/stall-reservations/${stallId}/reserve`,
+        {
+          tenantId,
+          actorUserId,
+        },
       );
+
+      setSuccess(response?.message ?? "Stall reserved successfully.");
 
       await loadStalls();
     } catch (currentError) {
       console.error(currentError);
 
-      setError(
-        getErrorMessage(
-          currentError,
-          'Unable to reserve stall.'
-        )
-      );
+      setError(getErrorMessage(currentError, "Unable to reserve stall."));
       await loadStalls();
     } finally {
       setProcessingStallId(null);
@@ -582,28 +527,26 @@ export function StallMasterPage() {
   const markSponsor = async (stallId: string) => {
     try {
       setProcessingStallId(stallId);
-      setError('');
-      setSuccess('');
+      setError("");
+      setSuccess("");
 
       // Optimistic instant UI update
-      setStalls(prev =>
-        prev.map(s =>
-          s.id === stallId
-            ? { ...s, isSponsor: true }
-            : s
-        )
+      setStalls((prev) =>
+        prev.map((s) => (s.id === stallId ? { ...s, isSponsor: true } : s)),
       );
 
       const response = await apiClient.post<{ message: string }>(
         `/admin/events/${eventId}/stalls/${stallId}/mark-sponsor`,
-        {}
+        {},
       );
 
-      setSuccess(response?.message ?? 'Stall marked as sponsor.');
+      setSuccess(response?.message ?? "Stall marked as sponsor.");
       await loadStalls();
     } catch (currentError) {
       console.error(currentError);
-      setError(getErrorMessage(currentError, 'Unable to mark stall as sponsor.'));
+      setError(
+        getErrorMessage(currentError, "Unable to mark stall as sponsor."),
+      );
       await loadStalls();
     } finally {
       setProcessingStallId(null);
@@ -613,75 +556,66 @@ export function StallMasterPage() {
   const unmarkSponsor = async (stallId: string) => {
     try {
       setProcessingStallId(stallId);
-      setError('');
-      setSuccess('');
+      setError("");
+      setSuccess("");
 
       // Optimistic instant UI update
-      setStalls(prev =>
-        prev.map(s =>
-          s.id === stallId
-            ? { ...s, isSponsor: false }
-            : s
-        )
+      setStalls((prev) =>
+        prev.map((s) => (s.id === stallId ? { ...s, isSponsor: false } : s)),
       );
 
       const response = await apiClient.post<{ message: string }>(
         `/admin/events/${eventId}/stalls/${stallId}/unmark-sponsor`,
-        {}
+        {},
       );
 
-      setSuccess(response?.message ?? 'Stall unmarked as sponsor.');
+      setSuccess(response?.message ?? "Stall unmarked as sponsor.");
       await loadStalls();
     } catch (currentError) {
       console.error(currentError);
-      setError(getErrorMessage(currentError, 'Unable to unmark stall as sponsor.'));
+      setError(
+        getErrorMessage(currentError, "Unable to unmark stall as sponsor."),
+      );
       await loadStalls();
     } finally {
       setProcessingStallId(null);
     }
   };
 
-  const releaseReservation = async (
-    stallId: string
-  ) => {
+  const releaseReservation = async (stallId: string) => {
     try {
       setProcessingStallId(stallId);
-      setError('');
-      setSuccess('');
+      setError("");
+      setSuccess("");
 
       // Optimistic instant UI update
-      setStalls(prev =>
-        prev.map(s =>
+      setStalls((prev) =>
+        prev.map((s) =>
           s.id === stallId
-            ? { ...s, currentStatus: 'Available' as StallStatus, currentBookingId: null }
-            : s
-        )
+            ? {
+                ...s,
+                currentStatus: "Available" as StallStatus,
+                currentBookingId: null,
+              }
+            : s,
+        ),
       );
 
-      const response =
-        await apiClient.post<ReservationResponse>(
-          `/admin/events/${eventId}/stall-reservations/${stallId}/release`,
-          {
-            tenantId,
-            actorUserId,
-          }
-        );
-
-      setSuccess(
-        response?.message ??
-        'Reservation released successfully.'
+      const response = await apiClient.post<ReservationResponse>(
+        `/admin/events/${eventId}/stall-reservations/${stallId}/release`,
+        {
+          tenantId,
+          actorUserId,
+        },
       );
+
+      setSuccess(response?.message ?? "Reservation released successfully.");
 
       await loadStalls();
     } catch (currentError) {
       console.error(currentError);
 
-      setError(
-        getErrorMessage(
-          currentError,
-          'Unable to release reservation.'
-        )
-      );
+      setError(getErrorMessage(currentError, "Unable to release reservation."));
       await loadStalls();
     } finally {
       setProcessingStallId(null);
@@ -706,7 +640,6 @@ export function StallMasterPage() {
   //   stall => stall.currentStatus === 'Frozen'
   // ).length;
 
-
   const totalCount = filteredCounts.total;
   const availableCount = filteredCounts.available;
   const reservationCount = filteredCounts.reservation;
@@ -714,8 +647,6 @@ export function StallMasterPage() {
   const frozenCount = filteredCounts.frozen;
   return (
     <div>
-
-
       {error && (
         <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
           {error}
@@ -1013,53 +944,33 @@ export function StallMasterPage() {
 
       <div className="mb-4 grid gap-3 md:grid-cols-5">
         <div className="card p-4">
-          <p className="text-xs uppercase text-slate-500">
-            Total
-          </p>
+          <p className="text-xs uppercase text-slate-500">Total</p>
 
-          <p className="text-2xl font-extrabold">
-            {totalCount}
-          </p>
+          <p className="text-2xl font-extrabold">{totalCount}</p>
         </div>
 
         <div className="card p-4">
-          <p className="text-xs uppercase text-slate-500">
-            Available
-          </p>
+          <p className="text-xs uppercase text-slate-500">Available</p>
 
-          <p className="text-2xl font-extrabold">
-            {availableCount}
-          </p>
+          <p className="text-2xl font-extrabold">{availableCount}</p>
         </div>
 
         <div className="card p-4">
-          <p className="text-xs uppercase text-slate-500">
-            Reservation
-          </p>
+          <p className="text-xs uppercase text-slate-500">Reservation</p>
 
-          <p className="text-2xl font-extrabold">
-            {reservationCount}
-          </p>
+          <p className="text-2xl font-extrabold">{reservationCount}</p>
         </div>
 
         <div className="card p-4">
-          <p className="text-xs uppercase text-slate-500">
-            Blocked
-          </p>
+          <p className="text-xs uppercase text-slate-500">Blocked</p>
 
-          <p className="text-2xl font-extrabold">
-            {blockedCount}
-          </p>
+          <p className="text-2xl font-extrabold">{blockedCount}</p>
         </div>
 
         <div className="card p-4">
-          <p className="text-xs uppercase text-slate-500">
-            Frozen
-          </p>
+          <p className="text-xs uppercase text-slate-500">Frozen</p>
 
-          <p className="text-2xl font-extrabold">
-            {frozenCount}
-          </p>
+          <p className="text-2xl font-extrabold">{frozenCount}</p>
         </div>
       </div>
       <div className="card mt-6 p-4">
@@ -1069,26 +980,30 @@ export function StallMasterPage() {
               className="input w-full"
               placeholder="Search stall, hall or zone"
               value={search}
-              onChange={event => setSearch(event.target.value)}
+              onChange={(event) => setSearch(event.target.value)}
             />
 
             <select
               className="input w-full"
               value={selectedStallSizeId}
-              onChange={event => {
+              onChange={(event) => {
                 setSelectedStallSizeId(event.target.value);
-                setSelectedStallNumber('All');
+                setSelectedStallNumber("All");
               }}
             >
               <option value="All">All Stall Sizes</option>
               {[...stallSizes]
                 .sort((first, second) =>
-                  first.displayName.localeCompare(second.displayName, undefined, {
-                    numeric: true,
-                    sensitivity: 'base',
-                  })
+                  first.displayName.localeCompare(
+                    second.displayName,
+                    undefined,
+                    {
+                      numeric: true,
+                      sensitivity: "base",
+                    },
+                  ),
                 )
-                .map(size => (
+                .map((size) => (
                   <option key={size.id} value={size.id}>
                     {size.code} - {size.displayName}
                   </option>
@@ -1099,16 +1014,16 @@ export function StallMasterPage() {
               className="input w-full"
               value={selectedStallNumber}
               disabled={stallNumberOptions.length === 0}
-              onChange={event => setSelectedStallNumber(event.target.value)}
+              onChange={(event) => setSelectedStallNumber(event.target.value)}
             >
               <option value="All">
-                {selectedStallSizeId === 'All'
-                  ? 'All Stall Names'
+                {selectedStallSizeId === "All"
+                  ? "All Stall Names"
                   : stallNumberOptions.length === 0
-                    ? 'No stalls found'
-                    : 'All Stall Names'}
+                    ? "No stalls found"
+                    : "All Stall Names"}
               </option>
-              {stallNumberOptions.map(stallNumber => (
+              {stallNumberOptions.map((stallNumber) => (
                 <option key={stallNumber} value={stallNumber}>
                   {stallNumber}
                 </option>
@@ -1118,8 +1033,8 @@ export function StallMasterPage() {
             <select
               className="input w-full"
               value={status}
-              onChange={event =>
-                setStatus(event.target.value as 'All' | StallStatus)
+              onChange={(event) =>
+                setStatus(event.target.value as "All" | StallStatus)
               }
             >
               <option value="All">All Statuses</option>
@@ -1131,7 +1046,6 @@ export function StallMasterPage() {
               <option value="Cancelled">Cancelled</option>
               <option value="Disabled">Disabled</option>
             </select>
-
           </div>
 
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
@@ -1142,7 +1056,11 @@ export function StallMasterPage() {
             >
               Clear Filters
             </button>
-            <RefreshListButton onRefresh={() => queryClient.invalidateQueries({ queryKey: STALLS_KEY })} />
+            <RefreshListButton
+              onRefresh={() =>
+                queryClient.invalidateQueries({ queryKey: STALLS_KEY })
+              }
+            />
           </div>
         </div>
       </div>
@@ -1155,12 +1073,12 @@ export function StallMasterPage() {
                 <th className="p-4">
                   <button
                     type="button"
-                    onClick={() => toggleSort('stallNumber')}
+                    onClick={() => toggleSort("stallNumber")}
                     className="flex items-center gap-1 font-semibold uppercase"
                   >
                     Stall
-                    {sortField === 'stallNumber' && (
-                      <span>{sortDirection === 'asc' ? '▲' : '▼'}</span>
+                    {sortField === "stallNumber" && (
+                      <span>{sortDirection === "asc" ? "▲" : "▼"}</span>
                     )}
                   </button>
                 </th>
@@ -1168,12 +1086,12 @@ export function StallMasterPage() {
                 <th className="p-4">
                   <button
                     type="button"
-                    onClick={() => toggleSort('stallSize')}
+                    onClick={() => toggleSort("stallSize")}
                     className="flex items-center gap-1 font-semibold uppercase"
                   >
                     Stall Size
-                    {sortField === 'stallSize' && (
-                      <span>{sortDirection === 'asc' ? '▲' : '▼'}</span>
+                    {sortField === "stallSize" && (
+                      <span>{sortDirection === "asc" ? "▲" : "▼"}</span>
                     )}
                   </button>
                 </th>
@@ -1181,12 +1099,12 @@ export function StallMasterPage() {
                 <th className="p-4">
                   <button
                     type="button"
-                    onClick={() => toggleSort('status')}
+                    onClick={() => toggleSort("status")}
                     className="flex items-center gap-1 font-semibold uppercase"
                   >
                     Status
-                    {sortField === 'status' && (
-                      <span>{sortDirection === 'asc' ? '▲' : '▼'}</span>
+                    {sortField === "status" && (
+                      <span>{sortDirection === "asc" ? "▲" : "▼"}</span>
                     )}
                   </button>
                 </th>
@@ -1196,25 +1114,18 @@ export function StallMasterPage() {
             </thead>
 
             <tbody>
-              {paginatedStalls
-                .map(stall => {
-                  const isProcessing =
-                    processingStallId === stall.id;
+              {paginatedStalls.map((stall) => {
+                const isProcessing = processingStallId === stall.id;
 
-                  return (
-                    <tr
-                      key={stall.id}
-                      className="border-t"
-                    >
-                      <td className="p-4 font-bold">
-                        {stall.stallNumber}
-                      </td>
+                return (
+                  <tr key={stall.id} className="border-t">
+                    <td className="p-4 font-bold">{stall.stallNumber}</td>
 
-                      <td className="p-4 text-slate-600">
-                        {getStallSizeLabel(stall)}
-                      </td>
+                    <td className="p-4 text-slate-600">
+                      {getStallSizeLabel(stall)}
+                    </td>
 
-                      {/* <td className="p-4 text-slate-600">
+                    {/* <td className="p-4 text-slate-600">
                         <div>
                           {stall.hallName ?? '—'}
                         </div>
@@ -1224,129 +1135,121 @@ export function StallMasterPage() {
                         </div>
                       </td> */}
 
-                      <td className="p-4">
-                        <StatusBadge
-                          value={
-                            stall.currentStatus
-                          }
-                        />
-                      </td>
+                    <td className="p-4">
+                      <StatusBadge value={stall.currentStatus} />
+                    </td>
 
-                      {/* <td className="p-4 text-slate-600">
+                    {/* <td className="p-4 text-slate-600">
                         {stall.currentBookingId ??
                           '—'}
                       </td> */}
 
-                      {/* <td className="p-4 text-slate-500">
+                    {/* <td className="p-4 text-slate-500">
                         {stall.sourceRow ?? '—'}
                       </td> */}
 
-                      <td className="p-4">
-                        {stall.currentStatus ===
-                          'Available' && (
-                            <button
-                              type="button"
-                              disabled={isProcessing}
-                              onClick={() =>
-                                reserveStall(
-                                  stall.id
-                                )
-                              }
-                              className="rounded-lg bg-amber-600 px-3 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                              {isProcessing
-                                ? 'Reserving...'
-                                : 'Reserve'}
-                            </button>
-                          )}
+                    <td className="p-4">
+                      {stall.currentStatus === "Available" && (
+                        <button
+                          type="button"
+                          disabled={isProcessing}
+                          onClick={() => reserveStall(stall.id)}
+                          className="rounded-lg bg-amber-600 px-3 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {isProcessing ? "Reserving..." : "Reserve"}
+                        </button>
+                      )}
 
-                        {stall.currentStatus ===
-                          'Reservation' && (
-                            <button
-                              type="button"
-                              disabled={isProcessing}
-                              onClick={() =>
-                                releaseReservation(
-                                  stall.id
-                                )
-                              }
-                              className="rounded-lg bg-emerald-700 px-3 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                              {isProcessing
-                                ? 'Releasing...'
-                                : 'Release'}
-                            </button>
-                          )}
+                      {stall.currentStatus === "Reservation" && (
+                        <button
+                          type="button"
+                          disabled={isProcessing}
+                          onClick={() => releaseReservation(stall.id)}
+                          className="rounded-lg bg-emerald-700 px-3 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {isProcessing ? "Releasing..." : "Release"}
+                        </button>
+                      )}
 
-                        {stall.currentStatus !==
-                          'Available' &&
-                          stall.currentStatus !==
-                          'Reservation' &&
-                          stall.currentStatus !==
-                          'Blocked' && (
-                            <span className="text-xs text-slate-400">
-                              No action
-                            </span>
-                          )}
-                        {stall.currentStatus === 'Blocked' && (
-                          <button
-                            type="button"
-                            disabled={
-                              isProcessing ||
-                              !stall.currentBookingId
-                            }
-                            onClick={() =>
-                              unblockStall(
-                                stall.id,
-                                stall.currentBookingId ?? null
-                              )
-                            }
-                            className="rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
-                            title={
-                              stall.currentBookingId
-                                ? 'Release blocked stall'
-                                : 'No booking linked to this stall'
-                            }
-                          >
-                            {isProcessing
-                              ? 'Unblocking...'
-                              : 'Unblock'}
-                          </button>
+                      {stall.currentStatus !== "Available" &&
+                        stall.currentStatus !== "Reservation" &&
+                        stall.currentStatus !== "Blocked" &&
+                        stall.currentStatus !== "Frozen" && (
+                          <span className="text-xs text-slate-400">
+                            No action
+                          </span>
                         )}
-                      </td>
-                      <td>
-                        {stall.isSponsor ? (
-                          <button
-                            type="button"
-                            disabled={isProcessing}
-                            onClick={() => unmarkSponsor(stall.id)}
-                            className="rounded-lg bg-violet-700 px-3 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
-                            title="Sponsor stall — proforma invoice uses HSN 998397. Click to unmark."
-                          >
-                            {isProcessing ? 'Updating...' : '★ Sponsor'}
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            disabled={isProcessing}
-                            onClick={() => markSponsor(stall.id)}
-                            className="rounded-lg border border-violet-600 px-3 py-2 text-xs font-semibold text-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
-                            title="Mark this stall as a Sponsor stall so its proforma invoice uses HSN 998397."
-                          >
-                            {isProcessing ? 'Updating...' : 'Mark Sponsor'}
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
+                      {stall.currentStatus === "Blocked" && (
+                        <button
+                          type="button"
+                          disabled={isProcessing || !stall.currentBookingId}
+                          onClick={() =>
+                            unblockStall(
+                              stall.id,
+                              stall.currentBookingId ?? null,
+                            )
+                          }
+                          className="rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                          title={
+                            stall.currentBookingId
+                              ? "Release blocked stall"
+                              : "No booking linked to this stall"
+                          }
+                        >
+                          {isProcessing ? "Unblocking..." : "Unblock"}
+                        </button>
+                      )}
+                      {stall.currentStatus === "Frozen" && (
+                        <button
+                          type="button"
+                          disabled={isProcessing || !stall.currentBookingId}
+                          onClick={() =>
+                            unblockStall(
+                              stall.id,
+                              stall.currentBookingId ?? null,
+                            )
+                          }
+                          className="rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                          title={
+                            stall.currentBookingId
+                              ? "Release frozen (confirmed) stall"
+                              : "No booking linked to this stall"
+                          }
+                        >
+                          {isProcessing ? "Releasing..." : "Release"}
+                        </button>
+                      )}
+                    </td>
+                    <td>
+                      {stall.isSponsor ? (
+                        <button
+                          type="button"
+                          disabled={isProcessing}
+                          onClick={() => unmarkSponsor(stall.id)}
+                          className="rounded-lg bg-violet-700 px-3 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                          title="Sponsor stall — proforma invoice uses HSN 998397. Click to unmark."
+                        >
+                          {isProcessing ? "Updating..." : "★ Sponsor"}
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled={isProcessing}
+                          onClick={() => markSponsor(stall.id)}
+                          className="rounded-lg border border-violet-600 px-3 py-2 text-xs font-semibold text-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
+                          title="Mark this stall as a Sponsor stall so its proforma invoice uses HSN 998397."
+                        >
+                          {isProcessing ? "Updating..." : "Mark Sponsor"}
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
 
               {filtered.length === 0 && (
                 <tr>
-                  <td
-                    colSpan={7}
-                    className="p-6 text-center text-slate-500"
-                  >
+                  <td colSpan={7} className="p-6 text-center text-slate-500">
                     No stalls found.
                   </td>
                 </tr>
@@ -1359,12 +1262,12 @@ export function StallMasterPage() {
           <div className="flex items-center justify-between border-t p-4 text-sm">
             <div className="flex items-center gap-2 text-slate-500">
               <span>
-                Showing{' '}
+                Showing{" "}
                 <span className="font-semibold text-slate-700">
                   {(currentPage - 1) * pageSize + 1}–
                   {Math.min(currentPage * pageSize, filtered.length)}
-                </span>{' '}
-                of{' '}
+                </span>{" "}
+                of{" "}
                 <span className="font-semibold text-slate-700">
                   {filtered.length}
                 </span>
@@ -1375,7 +1278,7 @@ export function StallMasterPage() {
                 <select
                   className="input w-auto py-1"
                   value={pageSize}
-                  onChange={event => {
+                  onChange={(event) => {
                     setPageSize(Number(event.target.value));
                     setCurrentPage(1);
                   }}
@@ -1401,7 +1304,7 @@ export function StallMasterPage() {
               <button
                 type="button"
                 disabled={currentPage === 1}
-                onClick={() => setCurrentPage(page => Math.max(1, page - 1))}
+                onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
                 className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 ‹
@@ -1409,10 +1312,10 @@ export function StallMasterPage() {
 
               {Array.from({ length: totalPages }, (_, index) => index + 1)
                 .filter(
-                  pageNumber =>
+                  (pageNumber) =>
                     pageNumber === 1 ||
                     pageNumber === totalPages ||
-                    Math.abs(pageNumber - currentPage) <= 1
+                    Math.abs(pageNumber - currentPage) <= 1,
                 )
                 .map((pageNumber, index, array) => (
                   <span key={pageNumber} className="flex items-center">
@@ -1424,8 +1327,8 @@ export function StallMasterPage() {
                       onClick={() => setCurrentPage(pageNumber)}
                       className={
                         pageNumber === currentPage
-                          ? 'rounded-lg bg-blue-700 px-3 py-1 text-xs font-semibold text-white'
-                          : 'rounded-lg border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50'
+                          ? "rounded-lg bg-blue-700 px-3 py-1 text-xs font-semibold text-white"
+                          : "rounded-lg border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50"
                       }
                     >
                       {pageNumber}
@@ -1437,7 +1340,7 @@ export function StallMasterPage() {
                 type="button"
                 disabled={currentPage === totalPages}
                 onClick={() =>
-                  setCurrentPage(page => Math.min(totalPages, page + 1))
+                  setCurrentPage((page) => Math.min(totalPages, page + 1))
                 }
                 className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
