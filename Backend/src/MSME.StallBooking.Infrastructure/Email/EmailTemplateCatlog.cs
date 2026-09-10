@@ -59,7 +59,36 @@ public static class EmailTemplateCatalog
         </p>
         <div style=""font-size:15px; color:#334155; line-height:1.7; margin:18px 0; white-space:pre-wrap;"">{{customMessage}}</div>
         
-        <div style=""margin-top:28px; padding:18px 20px; background-color:#f8fafc; border-left:4px solid #0B3B75; border-radius:8px;"">
+        <div style=""margin:20px 0; padding:18px 20px; background-color:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; text-align:center;"">
+            <p style=""margin:0 0 12px 0; font-size:13px; font-weight:700; color:#0B3B75; text-transform:uppercase; letter-spacing:0.5px;"">B2B Connect & Registration Portal</p>
+            <table style=""margin:0 auto; border-collapse:separate; border-spacing:12px 0;"">
+                <tr>
+                    <td style=""background:#ffffff; border:1px solid #bfdbfe; border-radius:8px; padding:12px 16px; text-align:center;"">
+                        <p style=""margin:0 0 8px 0; font-size:12px; font-weight:600; color:#334155;"">For Sourcing & Procurement</p>
+                        <a href=""https://msmesangamam.lubtn.com/buyer/register"" target=""_blank"" style=""display:inline-block; background-color:#0B3B75; color:#ffffff; font-weight:600; font-size:13px; padding:8px 16px; text-decoration:none; border-radius:6px;"">
+                            Register as Buyer &rarr;
+                        </a>
+                        <p style=""margin:6px 0 0 0; font-size:11px;""><a href=""https://msmesangamam.lubtn.com/buyer/register"" target=""_blank"" style=""color:#2563eb; text-decoration:underline; font-weight:500;"">https://msmesangamam.lubtn.com/buyer/register</a></p>
+                    </td>
+                    <td style=""background:#ffffff; border:1px solid #bfdbfe; border-radius:8px; padding:12px 16px; text-align:center;"">
+                        <p style=""margin:0 0 8px 0; font-size:12px; font-weight:600; color:#334155;"">For Vendors & Manufacturers</p>
+                        <a href=""https://msmesangamam.lubtn.com/seller/register"" target=""_blank"" style=""display:inline-block; background-color:#15803d; color:#ffffff; font-weight:600; font-size:13px; padding:8px 16px; text-decoration:none; border-radius:6px;"">
+                            Register as Seller &rarr;
+                        </a>
+                        <p style=""margin:6px 0 0 0; font-size:11px;""><a href=""https://msmesangamam.lubtn.com/seller/register"" target=""_blank"" style=""color:#15803d; text-decoration:underline; font-weight:500;"">https://msmesangamam.lubtn.com/seller/register</a></p>
+                    </td>
+                </tr>
+            </table>
+            <div style=""margin-top:14px; padding-top:10px; border-top:1px solid #dbeafe; font-size:13px; color:#1e40af;"">
+                🌐 <strong>Official Expo Website:</strong> <a href=""https://msmesangamam.lubtn.com"" target=""_blank"" style=""color:#2563eb; font-weight:600; text-decoration:underline;"">https://msmesangamam.lubtn.com</a>
+            </div>
+        </div>
+
+        <div style=""margin:16px 0; padding:12px 16px; background-color:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; font-size:13px; color:#166534;"">
+            <strong>📎 Stall card attached, please check.</strong>
+        </div>
+
+        <div style=""margin-top:24px; padding:18px 20px; background-color:#f8fafc; border-left:4px solid #0B3B75; border-radius:8px;"">
             <h4 style=""margin:0 0 10px 0; font-size:13px; font-weight:700; color:#0B3B75; text-transform:uppercase; letter-spacing:0.04em;"">
                 Exhibitor Information
             </h4>
@@ -79,6 +108,10 @@ public static class EmailTemplateCatalog
                 <tr>
                     <td style=""padding:4px 10px 4px 0; color:#64748b; font-weight:500;"">Direct Email:</td>
                     <td style=""padding:4px 0; color:#2563eb;"">{{replyToEmail}}</td>
+                </tr>
+                <tr>
+                    <td style=""padding:4px 10px 4px 0; color:#64748b; font-weight:500;"">Official Website:</td>
+                    <td style=""padding:4px 0; color:#2563eb;""><a href=""https://msmesangamam.lubtn.com"" target=""_blank"" style=""color:#2563eb; text-decoration:underline;"">https://msmesangamam.lubtn.com</a></td>
                 </tr>
             </table>
         </div>
