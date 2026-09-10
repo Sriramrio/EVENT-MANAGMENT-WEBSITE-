@@ -17,27 +17,27 @@ export const STATE_DISTRICT_MAP: Record<string, string[]> = {
         'Nilgiris', 'Perambalur', 'Pudukkottai', 'Ramanathapuram', 'Ranipet', 'Salem',
         'Sivaganga', 'Tenkasi', 'Thanjavur', 'Theni', 'Thoothukudi', 'Trichy',
         'Tirunelveli', 'Tirupattur', 'Tiruppur', 'Tiruvallur', 'Tiruvannamalai',
-        'Tiruvarur', 'Vellore', 'Villupuram', 'Virudhunagar'
+        'Tiruvarur', 'Vellore', 'Villupuram', 'Virudhunagar', 'Other District'
     ],
-    'Puducherry': ['Puducherry', 'Karaikal', 'Mahe', 'Yanam'],
+    'Puducherry': ['Puducherry', 'Karaikal', 'Mahe', 'Yanam', 'Other District'],
     'Karnataka': [
         'Bagalkote', 'Ballari', 'Belagavi', 'Bengaluru Rural', 'Bengaluru Urban', 'Bidar',
         'Chamarajanagar', 'Chikkaballapur', 'Chikkamagaluru', 'Chitradurga', 'Dakshina Kannada',
         'Davanagere', 'Dharwad', 'Gadag', 'Hassan', 'Haveri', 'Kalaburagi', 'Kodagu', 'Kolar',
         'Koppal', 'Mandya', 'Mysuru', 'Raichur', 'Ramanagara', 'Shivamogga', 'Tumakuru',
-        'Udupi', 'Uttara Kannada', 'Vijayapura', 'Yadgir'
+        'Udupi', 'Uttara Kannada', 'Vijayapura', 'Yadgir', 'Other District'
     ],
     'Kerala': [
         'Alappuzha', 'Ernakulam', 'Idukki', 'Kannur', 'Kasaragod', 'Kollam', 'Kottayam',
         'Kozhikode', 'Malappuram', 'Palakkad', 'Pathanamthitta', 'Thiruvananthapuram',
-        'Thrissur', 'Wayanad'
+        'Thrissur', 'Wayanad', 'Other District'
     ],
     'Andhra Pradesh': [
         'Alluri Sitharama Raju', 'Anakapalli', 'Anantapur', 'Annamayya', 'Bapatla',
         'Chittoor', 'Dr. B.R. Ambedkar Konaseema', 'East Godavari', 'Eluru', 'Guntur',
         'Kakinada', 'Krishna', 'Kurnool', 'Nandyal', 'NTR', 'Palnadu',
         'Parvathipuram Manyam', 'Prakasam', 'Srikakulam', 'Sri Sathya Sai', 'Tirupati',
-        'Visakhapatnam', 'Vizianagaram', 'West Godavari', 'YSR Kadapa'
+        'Visakhapatnam', 'Vizianagaram', 'West Godavari', 'YSR Kadapa', 'Other District'
     ],
     'Telangana': [
         'Adilabad', 'Bhadradri Kothagudem', 'Hanamkonda', 'Hyderabad', 'Jagtial', 'Jangaon',
@@ -45,7 +45,7 @@ export const STATE_DISTRICT_MAP: Record<string, string[]> = {
         'Komaram Bheem Asifabad', 'Mahabubabad', 'Mahabubnagar', 'Mancherial', 'Medak',
         'Medchal–Malkajgiri', 'Mulugu', 'Nagarkurnool', 'Nalgonda', 'Narayanpet', 'Nirmal',
         'Nizamabad', 'Peddapalli', 'Rajanna Sircilla', 'Ranga Reddy', 'Sangareddy',
-        'Siddipet', 'Suryapet', 'Vikarabad', 'Wanaparthy', 'Warangal', 'Yadadri Bhuvanagiri'
+        'Siddipet', 'Suryapet', 'Vikarabad', 'Wanaparthy', 'Warangal', 'Yadadri Bhuvanagiri', 'Other District'
     ],
     'Maharashtra': [
         'Ahmednagar', 'Akola', 'Amravati', 'Aurangabad', 'Beed', 'Bhandara', 'Buldhana',
@@ -53,7 +53,10 @@ export const STATE_DISTRICT_MAP: Record<string, string[]> = {
         'Kolhapur', 'Latur', 'Mumbai City', 'Mumbai Suburban', 'Nagpur', 'Nanded',
         'Nandurbar', 'Nashik', 'Osmanabad', 'Palghar', 'Parbhani', 'Pune', 'Raigad',
         'Ratnagiri', 'Sangli', 'Satara', 'Sindhudurg', 'Solapur', 'Thane', 'Wardha',
-        'Washim', 'Yavatmal'
+        'Washim', 'Yavatmal', 'Other District'
+    ],
+    'Other State': [
+        'Other District'
     ]
 };
 
@@ -68,6 +71,7 @@ const initial: BookingFormState = {
     state: 'Tamil Nadu',
     pincode: '',
     country: 'India',
+    pan: '',
     contactPersonName: '',
     contactPersonDesignation: '',
     mobile: '',
@@ -98,6 +102,29 @@ function optionalText(value: unknown): string {
 function requiredFallback(value: unknown, fallback = '-'): string {
     const text = String(value ?? '').trim();
     return text || fallback;
+}
+
+function hasExtraSpaces(value: string): boolean {
+    return value !== value.trim() || /\s{2,}/.test(value) || /\s/.test(value.trim());
+}
+
+function getFieldValidationError(
+    value: string,
+    pattern?: string,
+    hint?: string,
+    noSpaces?: boolean,
+): string {
+    if (!value) return '';
+
+    if (noSpaces && hasExtraSpaces(value)) {
+        return 'No spaces are allowed in this field.';
+    }
+
+    if (pattern && !new RegExp(`^${pattern}$`).test(value)) {
+        return hint ? `Invalid format. Expected: ${hint}` : 'Invalid format.';
+    }
+
+    return '';
 }
 
 export function VisitorBookingPage() {
@@ -160,6 +187,7 @@ export function VisitorBookingPage() {
             state: requiredFallback(read('state'), 'Tamil Nadu'),
             pincode: requiredFallback(read('pincode'), '600001'),
             country: requiredFallback(read('country'), 'India'),
+            pan: optionalText(read('pan')),
             contactPersonName,
             contactPersonDesignation,
             mobile: requiredFallback(read('mobile')),
@@ -187,9 +215,37 @@ export function VisitorBookingPage() {
     async function submit(event: FormEvent) {
         event.preventDefault();
 
-        // ← validation added: block submit until terms are accepted
+        // Check terms acceptance
         if (form.termsAccepted !== true) {
             setError('Please accept the Terms and Conditions to submit registration.');
+            return;
+        }
+
+        // Validate PIN Code
+        const pincode = text('pincode');
+        if (pincode && !/^[1-9][0-9]{5}$/.test(pincode)) {
+            setError('Invalid PIN Code format. Expected 6 digits (e.g. 600001).');
+            return;
+        }
+
+        // Validate Mobile
+        const mobile = text('mobile');
+        if (mobile && !/^(\+91[-\s]?)?[6-9][0-9]{9}$/.test(mobile)) {
+            setError('Invalid Mobile number format. Expected 10 digits (e.g. 9876543210).');
+            return;
+        }
+
+        // Validate PAN if entered
+        const pan = text('pan');
+        if (pan && !/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(pan)) {
+            setError('Invalid PAN format. Expected format: ABCDE1234F');
+            return;
+        }
+
+        // Validate Email
+        const email = text('email');
+        if (email && !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email)) {
+            setError('Invalid Email format. Expected format: name@company.com');
             return;
         }
 
@@ -207,9 +263,7 @@ export function VisitorBookingPage() {
             setSuccessRegNumber(result.bookingRegistrationNumber);
             setShowSuccessModal(true);
 
-            // Auto sign-in on this device — the visitor never has to type reg number +
-            // mobile again; scanning any exhibitor's QR from here on auto-fills their
-            // details. Best-effort: registration itself already succeeded either way.
+            // Auto sign-in on this device
             try {
                 const loginResult = await visitorApiClient.post<{
                     token: string;
@@ -229,7 +283,7 @@ export function VisitorBookingPage() {
                     contactPersonName: loginResult.contactPersonName
                 });
             } catch {
-                // Not fatal — visitor can still sign in manually later from /visitor/login.
+                // Not fatal
             }
         } catch (caughtError) {
             setError(
@@ -261,41 +315,100 @@ export function VisitorBookingPage() {
                 {error && <div className="mt-5 rounded-xl bg-red-50 p-4 text-sm font-semibold text-red-700">{error}</div>}
 
                 <Section title="01. Visitor & Company Details">
-                    {/* ← validation added: required */}
                     <Field label="Company / Visitor Name" name="legalName" value={text('legalName')} onChange={set} required />
                     <Field label="Brand / Trade Name" name="tradeName" value={text('tradeName')} onChange={set} />
-                    {/* ← validation added: required */}
                     <TextAreaField label="Address" name="registeredAddress" value={text('registeredAddress')} onChange={set} required />
-                    {/* ← validation added: required */}
                     <Select label="State" name="state" value={text('state')} options={STATES} onChange={handleStateChange} required />
-                    {/* ← validation added: required */}
                     <Field label="City" name="city" value={text('city')} onChange={set} required />
-                    {/* ← validation added: required */}
                     <Select label="District" name="district" value={text('district')} options={STATE_DISTRICT_MAP[text('state')] || []} onChange={set} required />
-                    {/* ← validation added: required + 6-digit pincode pattern */}
-                    <Field label="PIN Code" name="pincode" value={text('pincode')} onChange={set} pattern="^[1-9][0-9]{5}$" required />
-                    {/* ← validation added: required */}
+                    
+                    {/* PIN Code with format & typing validation */}
+                    <Field
+                        label="PIN Code"
+                        name="pincode"
+                        value={text('pincode')}
+                        onChange={set}
+                        pattern="^[1-9][0-9]{5}$"
+                        hint="600001"
+                        noSpaces={true}
+                        maxLength={6}
+                        required
+                    />
+
+                    {/* PAN Number with format & typing validation */}
+                    <Field
+                        label="PAN"
+                        name="pan"
+                        value={text('pan')}
+                        onChange={set}
+                        pattern="^[A-Z]{5}[0-9]{4}[A-Z]$"
+                        hint="ABCDE1234F"
+                        uppercase={true}
+                        noSpaces={true}
+                        maxLength={10}
+                    />
+
                     <Field label="Contact Person Name" name="contactPersonName" value={text('contactPersonName')} onChange={set} required />
                     <Field label="Designation" name="contactPersonDesignation" value={text('contactPersonDesignation')} onChange={set} />
-                    {/* ← validation added: required + Indian mobile pattern */}
-                    <Field label="Mobile Number" name="mobile" value={text('mobile')} onChange={set} pattern="^(\+91[-\s]?)?[6-9][0-9]{9}$" required />
-                    <Field label="Alternate Mobile" name="alternateMobile" value={text('alternateMobile')} onChange={set} />
-                    {/* ← validation added: required, type=email gives built-in format check */}
-                    <Field label="Email ID" name="email" value={text('email')} onChange={set} type="email" required />
-                    <Field label="Alternate Email" name="alternateEmail" value={text('alternateEmail')} onChange={set} type="email" />
+                    
+                    {/* Phone Number with format & typing validation */}
+                    <Field
+                        label="Mobile Number"
+                        name="mobile"
+                        value={text('mobile')}
+                        onChange={set}
+                        pattern="^(\+91[-\s]?)?[6-9][0-9]{9}$"
+                        hint="9876543210"
+                        maxLength={15}
+                        required
+                    />
+
+                    {/* Alternate Mobile with format & typing validation */}
+                    <Field
+                        label="Alternate Mobile"
+                        name="alternateMobile"
+                        value={text('alternateMobile')}
+                        onChange={set}
+                        pattern="^(\+91[-\s]?)?[6-9][0-9]{9}$"
+                        hint="9876543210"
+                        maxLength={15}
+                    />
+
+                    {/* Email ID with format & typing validation */}
+                    <Field
+                        label="Email ID"
+                        name="email"
+                        value={text('email')}
+                        onChange={set}
+                        type="email"
+                        pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+                        hint="name@company.com"
+                        noSpaces={true}
+                        required
+                    />
+
+                    {/* Alternate Email with format & typing validation */}
+                    <Field
+                        label="Alternate Email"
+                        name="alternateEmail"
+                        value={text('alternateEmail')}
+                        onChange={set}
+                        type="email"
+                        pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+                        hint="backup@company.com"
+                        noSpaces={true}
+                    />
+
                     <Field label="Website" name="website" value={text('website')} onChange={set} />
                 </Section>
 
                 <Section title="02. Industry Scale & Classification">
-                    {/* ← validation added: required */}
                     <RadioGroup label="Industry Scale" name="industryScale" value={text('industryScale')} options={['Micro', 'Small', 'Medium', 'Large Scale']} onChange={set} required />
-                    {/* ← validation added: required */}
                     <RadioGroup label="Business Type" name="businessType" value={text('businessType')} options={['Manufacturer', 'Service Provider', 'Distributor']} onChange={set} required />
                     <Select label="Company Constitution" name="companyConstitution" value={text('companyConstitution')} onChange={set} options={['Proprietorship', 'Partnership', 'Private Limited', 'Public Limited', 'LLP', 'Others']} />
                 </Section>
 
                 <Section title="03. Industry Category & Products">
-                    {/* ← validation added: required */}
                     <Select
                         label="Main Industry Category"
                         name="industryCategory"
@@ -381,7 +494,6 @@ export function VisitorBookingPage() {
                             The personal data you provide will be used to register you for this event. By completing this registration form, you accept the below condition.
                         </p>
                     </div>
-                    {/* ← validation added: required */}
                     <Check
                         label={
                             <span className="font-medium text-slate-700 leading-relaxed">
@@ -481,7 +593,6 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
     );
 }
 
-// ← validation added: required, pattern, maxLength props restored
 function Field({
     label,
     name,
@@ -491,6 +602,9 @@ function Field({
     pattern,
     maxLength,
     required = false,
+    hint,
+    uppercase = false,
+    noSpaces = false,
 }: {
     label: string;
     name: string;
@@ -500,7 +614,12 @@ function Field({
     pattern?: string;
     maxLength?: number;
     required?: boolean;
+    hint?: string;
+    uppercase?: boolean;
+    noSpaces?: boolean;
 }) {
+    const validationError = getFieldValidationError(value, pattern, hint, noSpaces);
+
     return (
         <label className="block">
             <span className="text-sm font-semibold text-slate-700">
@@ -509,19 +628,26 @@ function Field({
             </span>
 
             <input
-                className="input mt-1"
+                className={`input mt-1 ${uppercase ? 'uppercase' : ''} ${validationError ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
                 type={type}
                 value={value}
                 required={required}
                 pattern={value ? pattern : undefined}
                 maxLength={maxLength}
-                onChange={event => onChange(name, event.target.value)}
+                onChange={event =>
+                    onChange(name, uppercase ? event.target.value.toUpperCase() : event.target.value)
+                }
             />
+
+            {validationError ? (
+                <p className="mt-1 text-xs font-semibold text-red-600">{validationError}</p>
+            ) : hint ? (
+                <p className="mt-1 text-xs text-slate-500">Format: {hint}</p>
+            ) : null}
         </label>
     );
 }
 
-// ← validation added: required, maxLength props restored (+ char counter)
 function TextAreaField({
     label,
     name,
@@ -564,7 +690,6 @@ function TextAreaField({
     );
 }
 
-// ← validation added: required prop restored
 function Select({
     label,
     name,
@@ -604,7 +729,6 @@ function Select({
     );
 }
 
-// ← validation added: required prop restored on radio group + inputs
 function RadioGroup({
     label,
     name,
@@ -646,7 +770,6 @@ function RadioGroup({
     );
 }
 
-// ← validation added: required prop restored
 function Check({
     label,
     name,
