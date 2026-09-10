@@ -5,7 +5,7 @@ import {
   useState,
 } from 'react';
 
-import type { Stall } from '../../domain/models';
+import type { Stall, StallStatus } from '../../domain/models';
 import { StatusBadge } from '../../shared/StatusBadge';
 import { PageHeader } from '../../shared/components/PageHeader';
 import { apiClient } from '../../data/api/apiClient';
@@ -26,15 +26,6 @@ type ReleaseBlockResponse = {
   releasedAt: string;
   releaseReason: string;
 };
-type StallStatus =
-  | 'Available'
-  | 'Reservation'
-  | 'Blocked'
-  | 'Frozen'
-  | 'Released'
-  | 'Cancelled'
-  | 'Disabled'
-  | 'Allocated';
 
 type SortDirection = 'asc' | 'desc';
 type SortField = 'stallNumber' | 'stallSize' | 'status';
@@ -199,7 +190,7 @@ export function StallMasterPage() {
       const data = await stallMaster.list();
 
       setStalls(data);
-      queryClient.invalidateQueries({ queryKey: STALLS_KEY });
+      queryClient.setQueryData(STALLS_KEY, data);
       queryClient.invalidateQueries({ queryKey: ['stalls'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       queryClient.invalidateQueries({ queryKey: ['bookings'] });
@@ -228,6 +219,15 @@ export function StallMasterPage() {
       setError('');
       setSuccess('');
 
+      // Optimistic instant UI update
+      setStalls(prev =>
+        prev.map(s =>
+          s.id === stallId
+            ? { ...s, currentStatus: 'Available' as StallStatus, currentBookingId: null }
+            : s
+        )
+      );
+
       const response =
         await apiClient.post<ReleaseBlockResponse>(
           `/admin/events/${eventId}/bookings/${bookingId}/stalls/${stallId}/release-block`,
@@ -253,6 +253,7 @@ export function StallMasterPage() {
           'Unable to release blocked stall.'
         )
       );
+      await loadStalls();
     } finally {
       setProcessingStallId(null);
     }
@@ -540,6 +541,15 @@ export function StallMasterPage() {
       setError('');
       setSuccess('');
 
+      // Optimistic instant UI update
+      setStalls(prev =>
+        prev.map(s =>
+          s.id === stallId
+            ? { ...s, currentStatus: 'Reservation' as StallStatus }
+            : s
+        )
+      );
+
       const response =
         await apiClient.post<ReservationResponse>(
           `/admin/events/${eventId}/stall-reservations/${stallId}/reserve`,
@@ -564,6 +574,7 @@ export function StallMasterPage() {
           'Unable to reserve stall.'
         )
       );
+      await loadStalls();
     } finally {
       setProcessingStallId(null);
     }
@@ -573,6 +584,15 @@ export function StallMasterPage() {
       setProcessingStallId(stallId);
       setError('');
       setSuccess('');
+
+      // Optimistic instant UI update
+      setStalls(prev =>
+        prev.map(s =>
+          s.id === stallId
+            ? { ...s, isSponsor: true }
+            : s
+        )
+      );
 
       const response = await apiClient.post<{ message: string }>(
         `/admin/events/${eventId}/stalls/${stallId}/mark-sponsor`,
@@ -584,6 +604,7 @@ export function StallMasterPage() {
     } catch (currentError) {
       console.error(currentError);
       setError(getErrorMessage(currentError, 'Unable to mark stall as sponsor.'));
+      await loadStalls();
     } finally {
       setProcessingStallId(null);
     }
@@ -595,6 +616,15 @@ export function StallMasterPage() {
       setError('');
       setSuccess('');
 
+      // Optimistic instant UI update
+      setStalls(prev =>
+        prev.map(s =>
+          s.id === stallId
+            ? { ...s, isSponsor: false }
+            : s
+        )
+      );
+
       const response = await apiClient.post<{ message: string }>(
         `/admin/events/${eventId}/stalls/${stallId}/unmark-sponsor`,
         {}
@@ -605,6 +635,7 @@ export function StallMasterPage() {
     } catch (currentError) {
       console.error(currentError);
       setError(getErrorMessage(currentError, 'Unable to unmark stall as sponsor.'));
+      await loadStalls();
     } finally {
       setProcessingStallId(null);
     }
@@ -617,6 +648,15 @@ export function StallMasterPage() {
       setProcessingStallId(stallId);
       setError('');
       setSuccess('');
+
+      // Optimistic instant UI update
+      setStalls(prev =>
+        prev.map(s =>
+          s.id === stallId
+            ? { ...s, currentStatus: 'Available' as StallStatus, currentBookingId: null }
+            : s
+        )
+      );
 
       const response =
         await apiClient.post<ReservationResponse>(
@@ -642,6 +682,7 @@ export function StallMasterPage() {
           'Unable to release reservation.'
         )
       );
+      await loadStalls();
     } finally {
       setProcessingStallId(null);
     }

@@ -150,25 +150,23 @@ public sealed class AdminExhibitorRequirementsController : ControllerBase
         if (!IsAuthorizedAdmin())
             return Forbid();
 
-        var exhibitors = await _db.Exhibitors
-            .AsNoTracking()
-            .OrderByDescending(e => e.CreatedAt)
-            .ToListAsync(ct);
-
         var bookings = await (
             from b in _db.StallBookings.AsNoTracking()
-            join s in _db.Stalls.AsNoTracking() on b.AllocatedStallId equals s.Id into stallJoin
-            from s in stallJoin.DefaultIfEmpty()
+            join s in _db.Stalls.AsNoTracking() on b.AllocatedStallId equals s.Id
             join sz in _db.StallSizes.AsNoTracking() on b.RequestedStallSizeId equals sz.Id into szJoin
             from sz in szJoin.DefaultIfEmpty()
+            where b.BookingStatus != BookingStatus.Cancelled
+               && b.BookingStatus != BookingStatus.ReleasedDueToNonPayment
+               && b.AllocatedStallId != null
+               && s.StallNumber != null
             orderby b.CreatedAt descending
             select new
             {
                 Booking = b,
-                StallNumber = s != null ? s.StallNumber : null,
+                StallNumber = s.StallNumber,
                 StallSizeName = sz != null ? (sz.DisplayName ?? sz.Code) : null,
                 StallSizeTotal = sz != null ? sz.TotalAmount : 0m,
-                IsSponsor = s != null && s.IsSponsor
+                IsSponsor = s.IsSponsor
             }
         ).ToListAsync(ct);
 
@@ -202,10 +200,22 @@ public sealed class AdminExhibitorRequirementsController : ControllerBase
             .GroupBy(b => b.Booking.ExhibitorId)
             .ToDictionary(
                 g => g.Key,
-                g => g.OrderBy(b => b.Booking.BookingStatus == BookingStatus.Cancelled ? 1 : 0)
+                g => g.OrderByDescending(b => payments.TryGetValue(b.Booking.Id, out var p) ? p.TotalPaid : 0m)
+                      .ThenByDescending(b => b.Booking.BookingStatus == BookingStatus.Confirmed ? 1 : 0)
                       .ThenByDescending(b => b.Booking.CreatedAt)
                       .First()
             );
+
+        var paidExhibitorIds = bookingsByExhibitor
+            .Where(kvp => payments.TryGetValue(kvp.Value.Booking.Id, out var p) && p.TotalPaid > 0)
+            .Select(kvp => kvp.Key)
+            .ToHashSet();
+
+        var exhibitors = await _db.Exhibitors
+            .AsNoTracking()
+            .Where(e => paidExhibitorIds.Contains(e.Id))
+            .OrderByDescending(e => e.CreatedAt)
+            .ToListAsync(ct);
 
         var result = new List<AdminExhibitorDto>(exhibitors.Count);
         foreach (var ex in exhibitors)
@@ -262,6 +272,12 @@ public sealed class AdminExhibitorRequirementsController : ControllerBase
                 {
                     paymentStatus = "Unpaid";
                 }
+            }
+
+            // Strictly skip any unpaid exhibitors
+            if (bInfo == null || (totalPaid ?? 0m) <= 0m || paymentStatus == "Unpaid")
+            {
+                continue;
             }
 
             result.Add(new AdminExhibitorDto(

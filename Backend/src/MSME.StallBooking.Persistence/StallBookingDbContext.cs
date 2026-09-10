@@ -404,6 +404,7 @@ public sealed class StallBookingDbContext : DbContext
         b.Property(x => x.Remarks).HasColumnName("remarks").HasMaxLength(500);
         b.HasIndex("EventId", nameof(Payment.PaymentReferenceNumber)).IsUnique();
         b.Property(x => x.isTdsDeductable).HasColumnName("isTdsDeductable").HasDefaultValue(false);
+        b.Property(x => x.TdsPercentage).HasColumnName("tds_percentage").HasPrecision(5, 2);
         b.HasIndex(x => x.BookingId);
         b.HasIndex(x => x.VerificationStatus);
         Audit(b);
@@ -438,6 +439,7 @@ public sealed class StallBookingDbContext : DbContext
         b.Property(x => x.TotalAmount).HasColumnName("total_amount").HasPrecision(14,2);
         b.Property(x => x.AmountInWords).HasColumnName("amount_in_words").HasMaxLength(500);
         b.Property(x => x.isTdsDeductable).HasColumnName("isTdsDeductable").HasDefaultValue(false);
+        b.Property(x => x.TdsPercentage).HasColumnName("tds_percentage").HasPrecision(5, 2);
         b.Property(x => x.TaxAmountInWords).HasColumnName("tax_amount_in_words").HasMaxLength(500);
         b.Property(x => x.Notes).HasColumnName("notes").HasMaxLength(500);
         b.Property(x => x.BankAccountName).HasColumnName("bank_account_name").HasMaxLength(150);

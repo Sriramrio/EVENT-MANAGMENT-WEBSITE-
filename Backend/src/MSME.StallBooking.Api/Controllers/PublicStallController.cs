@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MSME.StallBooking.Application.Abstractions;
@@ -73,8 +73,9 @@ public sealed class PublicStallController : ControllerBase
         return Ok(new
         {
             registrationNumber = booking.BookingRegistrationNumber,
-            companyName = string.IsNullOrWhiteSpace(exhibitor.TradeName) ? exhibitor.LegalName : exhibitor.TradeName,
+            companyName = string.IsNullOrWhiteSpace(exhibitor.LegalName) ? (exhibitor.TradeName ?? "Exhibitor") : exhibitor.LegalName,
             legalName = exhibitor.LegalName,
+            tradeName = exhibitor.TradeName,
             fasciaName = booking.FasciaName,
             stallNumber,
             industryCategory = exhibitor.IndustryCategory,
@@ -267,22 +268,8 @@ public sealed class PublicStallController : ControllerBase
 
           <!-- ===== SIGN-OFF ===== -->
           <tr>
-            <td style=""padding:24px 32px 8px 32px;"">
-              <p style=""margin:0;font-size:13px;line-height:20px;color:#64748b;"">Regards,<br/>MSME Sangamam</p>
-            </td>
-          </tr>
-
-          <!-- ===== FOOTER: POWERED BY ===== -->
-          <tr>
             <td style=""padding:24px 32px 28px 32px;"">
-              <table role=""presentation"" width=""100%"" cellpadding=""0"" cellspacing=""0"" style=""border-top:1px solid #e2e8f0;padding-top:16px;"">
-                <tr>
-                  <td align=""center"" style=""padding-top:16px;"">
-                    <p style=""margin:0;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#94a3b8;"">Powered by</p>
-                    <a href=""https://www.atribsglobal.com/"" style=""display:inline-block;margin-top:4px;font-size:13px;font-weight:800;color:{BrandBlue};text-decoration:none;"">ATRIBS GLOBAL</a>
-                  </td>
-                </tr>
-              </table>
+              <p style=""margin:0;font-size:13px;line-height:20px;color:#64748b;"">Regards,<br/>MSME Sangamam</p>
             </td>
           </tr>
 

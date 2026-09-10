@@ -5,6 +5,7 @@ import { toast } from "react-hot-toast";
 import { RequirementStepper } from "./wizard/RequirementStepper";
 import { useRequirementWizard, OperationItem } from "./wizard/requirementWizardStore";
 import { useSaveDraft } from "../../../../services/buyer/hooks";
+import { ModalPortal } from "../../../../shared/components/ModalPortal";
 
 export default function RequirementOperationsQuantityPage() {
   const nav = useNavigate();
@@ -283,113 +284,117 @@ export default function RequirementOperationsQuantityPage() {
 
       {/* Add Operation Modal */}
       {showAddOpModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl animate-in fade-in">
-            <h3 className="text-base font-extrabold text-slate-900">Add Route Operation</h3>
-            <form onSubmit={handleAddOperation} className="mt-4 space-y-4">
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-700">Sequence</label>
-                  <input
-                    type="number"
-                    step="10"
-                    value={newOpSeq}
-                    onChange={(e) => setNewOpSeq(Number(e.target.value))}
-                    className="w-full rounded-lg border border-slate-300 px-2.5 py-2 text-xs font-medium text-slate-800"
-                  />
+        <ModalPortal>
+          <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+            <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+              <h3 className="text-base font-extrabold text-slate-900">Add Route Operation</h3>
+              <form onSubmit={handleAddOperation} className="mt-4 space-y-4">
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="mb-1 block text-xs font-bold text-slate-700">Sequence</label>
+                    <input
+                      type="number"
+                      step="10"
+                      value={newOpSeq}
+                      onChange={(e) => setNewOpSeq(Number(e.target.value))}
+                      className="w-full rounded-lg border border-slate-300 px-2.5 py-2 text-xs font-medium text-slate-800"
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="mb-1 block text-xs font-bold text-slate-700">Operation Name *</label>
+                    <input
+                      type="text"
+                      required
+                      value={newOpName}
+                      onChange={(e) => setNewOpName(e.target.value)}
+                      placeholder="e.g. Ultrasonic Cleaning"
+                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium text-slate-800 outline-none focus:border-blue-500"
+                    />
+                  </div>
                 </div>
-                <div className="col-span-2">
-                  <label className="mb-1 block text-xs font-bold text-slate-700">Operation Name *</label>
+                <div>
+                  <label className="mb-1 block text-xs font-bold text-slate-700">Mandatory</label>
+                  <select
+                    value={newOpMandatory}
+                    onChange={(e) => setNewOpMandatory(e.target.value as any)}
+                    className="w-full rounded-lg border border-slate-300 px-2.5 py-2 text-xs font-medium text-slate-800"
+                  >
+                    <option value="Yes">Yes</option>
+                    <option value="Preferred">Preferred</option>
+                    <option value="Optional">Optional</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-bold text-slate-700">Notes (Optional)</label>
                   <input
                     type="text"
-                    required
-                    value={newOpName}
-                    onChange={(e) => setNewOpName(e.target.value)}
-                    placeholder="e.g. Ultrasonic Cleaning"
+                    value={newOpNotes}
+                    onChange={(e) => setNewOpNotes(e.target.value)}
+                    placeholder="e.g. As per standard operating procedure"
                     className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium text-slate-800 outline-none focus:border-blue-500"
                   />
                 </div>
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-bold text-slate-700">Mandatory</label>
-                <select
-                  value={newOpMandatory}
-                  onChange={(e) => setNewOpMandatory(e.target.value as any)}
-                  className="w-full rounded-lg border border-slate-300 px-2.5 py-2 text-xs font-medium text-slate-800"
-                >
-                  <option value="Yes">Yes</option>
-                  <option value="Preferred">Preferred</option>
-                  <option value="Optional">Optional</option>
-                </select>
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-bold text-slate-700">Notes (Optional)</label>
-                <input
-                  type="text"
-                  value={newOpNotes}
-                  onChange={(e) => setNewOpNotes(e.target.value)}
-                  placeholder="e.g. As per standard operating procedure"
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium text-slate-800 outline-none focus:border-blue-500"
-                />
-              </div>
-              <div className="flex justify-end gap-2 pt-3">
-                <button
-                  type="button"
-                  onClick={() => setShowAddOpModal(false)}
-                  className="rounded-lg border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="rounded-lg bg-blue-600 px-5 py-2 text-xs font-bold text-white hover:bg-blue-700"
-                >
-                  Add Operation
-                </button>
-              </div>
-            </form>
+                <div className="flex justify-end gap-2 pt-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddOpModal(false)}
+                    className="rounded-lg border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="rounded-lg bg-blue-600 px-5 py-2 text-xs font-bold text-white hover:bg-blue-700"
+                  >
+                    Add Operation
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
-        </div>
+        </ModalPortal>
       )}
 
       {/* Edit Notes Modal */}
       {editingNoteItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl animate-in fade-in">
-            <h3 className="text-base font-extrabold text-slate-900">
-              Notes for {editingNoteItem.operation}
-            </h3>
-            <textarea
-              rows={3}
-              value={editingNoteItem.notes}
-              onChange={(e) =>
-                setEditingNoteItem({ ...editingNoteItem, notes: e.target.value })
-              }
-              placeholder="Enter special process notes or inspection parameters..."
-              className="mt-3 w-full rounded-lg border border-slate-300 p-3 text-xs font-medium text-slate-800 outline-none focus:border-blue-500"
-            />
-            <div className="mt-4 flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setEditingNoteItem(null)}
-                className="rounded-lg border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50"
-              >
-                Close
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  wizard.updateOperation(editingNoteItem.id, { notes: editingNoteItem.notes });
-                  setEditingNoteItem(null);
-                }}
-                className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-5 py-2 text-xs font-bold text-white hover:bg-blue-700"
-              >
-                <Check className="h-3.5 w-3.5" />
-                Save Note
-              </button>
+        <ModalPortal>
+          <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+            <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+              <h3 className="text-base font-extrabold text-slate-900">
+                Notes for {editingNoteItem.operation}
+              </h3>
+              <textarea
+                rows={3}
+                value={editingNoteItem.notes}
+                onChange={(e) =>
+                  setEditingNoteItem({ ...editingNoteItem, notes: e.target.value })
+                }
+                placeholder="Enter special process notes or inspection parameters..."
+                className="mt-3 w-full rounded-lg border border-slate-300 p-3 text-xs font-medium text-slate-800 outline-none focus:border-blue-500"
+              />
+              <div className="mt-4 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingNoteItem(null)}
+                  className="rounded-lg border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50"
+                >
+                  Close
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    wizard.updateOperation(editingNoteItem.id, { notes: editingNoteItem.notes });
+                    setEditingNoteItem(null);
+                  }}
+                  className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-5 py-2 text-xs font-bold text-white hover:bg-blue-700"
+                >
+                  <Check className="h-3.5 w-3.5" />
+                  Save Note
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        </ModalPortal>
       )}
     </div>
   );

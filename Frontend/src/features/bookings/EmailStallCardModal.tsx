@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { toBlob } from "html-to-image";
 import { apiClient } from "../../data/api/apiClient";
+import { ModalPortal } from "../../shared/components/ModalPortal";
 
 export type EmailStallCardBooking = {
     id: string;
@@ -118,7 +119,7 @@ export function EmailStallCardModal({ booking, onClose, disableSendEmail }: Prop
         );
         const captureHeight = Math.ceil(
             Math.max(cardBounds.height, card.scrollHeight)
-        );
+        ) + 8;
 
         const blob = await toBlob(card, {
             cacheBust: false,
@@ -208,14 +209,15 @@ export function EmailStallCardModal({ booking, onClose, disableSendEmail }: Prop
     };
 
     return (
-        <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-2 sm:p-4 backdrop-blur-sm overflow-y-auto"
-            onMouseDown={(event) => {
-                if (event.target === event.currentTarget) {
-                    onClose();
-                }
-            }}
-        >
+        <ModalPortal>
+            <div
+                className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/70 p-2 sm:p-4 backdrop-blur-sm overflow-y-auto"
+                onMouseDown={(event) => {
+                    if (event.target === event.currentTarget) {
+                        onClose();
+                    }
+                }}
+            >
             <div className="flex max-h-[95vh] my-auto w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
                 {/* Header */}
                 <div className="flex items-start justify-between border-b border-slate-200 px-4 py-4 sm:px-6 sm:py-5">
@@ -269,11 +271,11 @@ export function EmailStallCardModal({ booking, onClose, disableSendEmail }: Prop
                         }}
                     >
                         <div className="w-full overflow-hidden rounded-xl sm:rounded-2xl border-2 border-blue-800 bg-white">
-                            {/* Stall Number & Fascia */}
+                            {/* Stall Number & Company Name */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 border-b border-blue-200">
                                 <CardHeading label="Stall Number" value={booking.stallNumber} />
                                 <div className="border-t sm:border-t-0 sm:border-l border-blue-200">
-                                    <CardHeading label="Fascia Name" value={booking.fasciaName} />
+                                    <CardHeading label="Company Name" value={booking.companyName || booking.fasciaName} />
                                 </div>
                             </div>
 
@@ -445,7 +447,8 @@ export function EmailStallCardModal({ booking, onClose, disableSendEmail }: Prop
                     </div>
                 </div>
             </div>
-        </div>
+            </div>
+        </ModalPortal>
     );
 }
 

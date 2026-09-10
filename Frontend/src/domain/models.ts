@@ -13,7 +13,7 @@ export type BookingStatus =
   | 'Cancelled'
   | 'Closed';
 
-export type StallStatus = 'Available' | 'Blocked' | 'Frozen' | 'Released' | 'Cancelled' | 'Disabled' | 'Reservation';
+export type StallStatus = 'Available' | 'Blocked' | 'Frozen' | 'Released' | 'Cancelled' | 'Disabled' | 'Reservation' | 'Allocated';
 export type AllocationStatus = 'Blocked' | 'Frozen' | 'Released' | 'Cancelled' | 'Changed';
 export type PaymentStatus = 'Pending' | 'Submitted' | 'Verified' | 'Rejected' | 'ClarificationRequired';
 export type InvoiceStatus = 'Draft' | 'Generated' | 'Sent' | 'Cancelled' | 'Revised';
@@ -146,9 +146,9 @@ export interface StallBooking {
   stallOption2Id?: UUID | null;
   stallOption1Number?: string | null;
   stallOption2Number?: string | null;
-  companyLogo?:string;
+  companyLogo?: string;
   totalPaidAmount?: number;
-  balanceDueAmount?: number;  
+  balanceDueAmount?: number;
   lubMember?: boolean;
   tanNumber?: string | null;
 }
@@ -189,7 +189,9 @@ export interface Payment {
   verifiedAt?: string | null;
   rejectionReason?: string | null;
   remarks?: string | null;
-   isTdsDeductable?: boolean;
+  isTdsDeductable?: boolean;
+  tdsPercentage?: number | null;
+
 }
 
 export interface ProformaInvoice {
@@ -228,7 +230,8 @@ export interface ProformaInvoice {
   generatedAt: string;
   sentAt?: string | null;
   taxInvoiceNumber?: string;
-isTdsDeductable?:boolean;
+  isTdsDeductable?: boolean;
+  tdsPercentage?: number | null;
 
 }
 
@@ -269,5 +272,5 @@ export interface User {
   email: string;
   roleCode: string;
   permissions: string[];
-  organizationType?:string;
+  organizationType?: string;
 }

@@ -11,6 +11,8 @@ import { repositories } from '../../data/repositoryFactory';
 import { appConfig } from '../../config/appConfig';
 import { SidebarDigitalPartnerFooter } from '../../components/BaseComponents/SidebarDigitalPartnerFooter';
 
+import { PERMISSIONS } from '../../config/permissions';
+
 export function AdminShell() {
   const { user, setUser, hasPermission } = useSession();
   const navigate = useNavigate();
@@ -25,7 +27,43 @@ export function AdminShell() {
 
   // Background prefetch all core admin data so menu navigation is instant (0ms)
   useEffect(() => {
-    if (user && user.roleCode !== 'BuyerAdmin' && user.roleCode !== 'SellerAdmin') {
+    if (!user) return;
+
+    // Prefetch Exhibitor Management data if user has permission
+    if (hasPermission(PERMISSIONS.exhibitorRequirementsManage) || user.roleCode === 'ExhibitorAdmin' || user.roleCode === 'SuperAdmin') {
+      void queryClient.prefetchQuery({
+        queryKey: ['admin', 'exhibitors'],
+        queryFn: () => apiClient.get('/admin/exhibitors'),
+        staleTime: 60_000,
+      });
+
+      void queryClient.prefetchQuery({
+        queryKey: ['admin', 'exhibitor-requirements'],
+        queryFn: () => apiClient.get('/admin/exhibitor-requirements'),
+        staleTime: 60_000,
+      });
+
+      void queryClient.prefetchQuery({
+        queryKey: ['admin', 'additional-requirement-items'],
+        queryFn: () => apiClient.get('/admin/additional-requirement-items'),
+        staleTime: 5 * 60_000,
+      });
+
+      void queryClient.prefetchQuery({
+        queryKey: ['admin', 'exhibitor-requirements-feature-status'],
+        queryFn: () => apiClient.get('/admin/exhibitor-requirements/feature-status'),
+        staleTime: 5 * 60_000,
+      });
+
+      void queryClient.prefetchQuery({
+        queryKey: ['admin', 'email-templates'],
+        queryFn: () => apiClient.get('/admin/email-templates'),
+        staleTime: 5 * 60_000,
+      });
+    }
+
+    // Prefetch core booking, stall, and financial data only for roles with access
+    if (user.roleCode !== 'BuyerAdmin' && user.roleCode !== 'SellerAdmin' && user.roleCode !== 'ExhibitorAdmin') {
       void queryClient.prefetchQuery({
         queryKey: ['admin', 'bookings'],
         queryFn: () => apiClient.get('/admin/events/current/bookings'),
@@ -92,7 +130,7 @@ export function AdminShell() {
         staleTime: 5 * 60_000,
       });
     }
-  }, [user, queryClient]);
+  }, [user, hasPermission, queryClient]);
 
   const items = useMemo(() => getMenuItems(hasPermission, user?.roleCode), [hasPermission, user?.roleCode]);
 

@@ -472,7 +472,7 @@ public sealed class EmailComposer : IEmailComposer
             ? exhibitor.ContactPersonName.Trim()
             : "Exhibitor";
 
-        var balanceDue = expectedTotal - totalPaidAfterThis;
+        var balanceDue = Math.Max(0m, expectedTotal - totalPaidAfterThis);
         var templateCode = isFullSettlement
             ? "PAYMENT_VERIFIED_RECEIPT_SENT"
             : "PART_PAYMENT_VERIFIED_RECEIPT_SENT";

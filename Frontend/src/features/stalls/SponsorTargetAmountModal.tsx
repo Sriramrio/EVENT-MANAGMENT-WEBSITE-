@@ -4,7 +4,7 @@ type Props = {
   stallNumber: string;
   isSubmitting?: boolean;
   onCancel: () => void;
-  onConfirm: (targetAmount: number, isGstApplicable: boolean, isTdsDeductable: boolean) => void;
+  onConfirm: (targetAmount: number, isGstApplicable: boolean, isTdsDeductable: boolean, tdsPercentage?: number) => void;
 };
 
 export function SponsorTargetAmountModal({
@@ -17,6 +17,7 @@ export function SponsorTargetAmountModal({
   const [error, setError] = useState('');
   const [isGstApplicable, setIsGstApplicable] = useState(true);
   const [isTdsDeductable, setIsTdsDeductable] = useState(false);
+  const [tdsPercentage, setTdsPercentage] = useState<number>(2);
 
   function handleConfirm() {
     const parsed = Number(amount);
@@ -27,7 +28,7 @@ export function SponsorTargetAmountModal({
     }
 
     setError('');
-    onConfirm(parsed, isGstApplicable, isTdsDeductable);
+    onConfirm(parsed, isGstApplicable, isTdsDeductable, isTdsDeductable ? tdsPercentage : undefined);
   }
 
   return (
@@ -130,12 +131,47 @@ export function SponsorTargetAmountModal({
               <span>
                 <span className="font-semibold text-slate-700">TDS Deductable</span>
                 <span className="block text-xs text-slate-500">
-                  Ticked: sponsor is expected to deduct 2% TDS before
+                  Ticked: sponsor is expected to deduct {tdsPercentage}% TDS before
                   transferring. This is a preview only — the invoice total
                   stays at the Sponor Amount above.
                 </span>
               </span>
             </label>
+
+            {isTdsDeductable && (
+              <div className="ml-6 mt-2">
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  TDS Deduction Percentage (%)
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min={0.1}
+                    max={100}
+                    step="0.01"
+                    value={tdsPercentage}
+                    onChange={e => setTdsPercentage(parseFloat(e.target.value) || 0)}
+                    className="w-28 rounded-lg border border-slate-300 px-3 py-1.5 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-200"
+                  />
+                  <span className="text-xs text-slate-500">%</span>
+                  <div className="flex gap-1.5 ml-2">
+                    {[2, 10, 1].map(rate => (
+                      <button
+                        key={rate}
+                        type="button"
+                        onClick={() => setTdsPercentage(rate)}
+                        className={`px-2 py-0.5 text-xs rounded border transition-colors ${tdsPercentage === rate
+                            ? 'bg-amber-600 text-white border-amber-600 font-semibold'
+                            : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'
+                          }`}
+                      >
+                        {rate}%
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

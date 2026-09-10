@@ -274,6 +274,7 @@ public sealed class Payment : AuditableEntity
     public string? ReceiptNumber { get; private set; }
     public bool IsPartialPayment { get; private set; }
     public bool isTdsDeductable { get; private set; }
+    public decimal? TdsPercentage { get; private set; }
     public bool isGstApplicable { get; private set; }
     public string? gstType { get; private set; }
 
@@ -292,6 +293,7 @@ public sealed class Payment : AuditableEntity
       DateOnly paymentDate,
       Guid? proofFileId,
       bool isTdsDeductable = false,
+      decimal? tdsPercentage = null,
       bool isGstApplicable = false,
       string? gstType = null,
       string? gstAmount = null,
@@ -312,6 +314,7 @@ public sealed class Payment : AuditableEntity
             PaymentProofFileId = proofFileId,
             VerificationStatus = PaymentVerificationStatus.Submitted,
             isTdsDeductable = isTdsDeductable,
+            TdsPercentage = isTdsDeductable ? (tdsPercentage ?? 2m) : null,
             isGstApplicable = isGstApplicable,
             gstType = gstType,
             gstAmount = gstAmount,
@@ -330,17 +333,13 @@ public sealed class Payment : AuditableEntity
      decimal expectedAmount,
      string receiptNumber,
      bool isPartialPayment,
-     bool isTdsDeductable = false)
+     bool isTdsDeductable = false,
+     decimal? tdsPercentage = null)
     {
         if (VerificationStatus == PaymentVerificationStatus.Verified)
             throw new DomainRuleException(
                 ErrorCodes.PaymentAlreadyVerified,
                 "Payment is already verified.");
-
-        if (AmountPaid > expectedAmount)
-            throw new DomainRuleException(
-                ErrorCodes.PaymentAmountMismatch,
-                $"Payment amount {AmountPaid} cannot exceed expected amount {expectedAmount}.");
 
         VerificationStatus = PaymentVerificationStatus.Verified;
         VerifiedBy = actorUserId;
@@ -350,6 +349,7 @@ public sealed class Payment : AuditableEntity
         ReceiptNumber = receiptNumber;
         IsPartialPayment = isPartialPayment;
         this.isTdsDeductable = isTdsDeductable;
+        TdsPercentage = isTdsDeductable ? (tdsPercentage ?? TdsPercentage ?? 2m) : null;
     }
 
     public void Reject(Guid actorUserId, string reason)
@@ -388,6 +388,7 @@ public sealed class ProformaInvoice : AuditableEntity
     public decimal GstAmount { get; private set; }
     public decimal TotalAmount { get; private set; }
     public bool isTdsDeductable { get; private set; }
+    public decimal? TdsPercentage { get; private set; }
     public string AmountInWords { get; private set; } = "";
     public string TaxAmountInWords { get; private set; } = "";
     public string Notes { get; private set; } = "";
@@ -429,6 +430,7 @@ public sealed class ProformaInvoice : AuditableEntity
             GstAmount = gstAmount,
             TotalAmount = snapshot.BaseAmount + gstAmount,
             isTdsDeductable = snapshot.isTdsDeductable,
+            TdsPercentage = snapshot.isTdsDeductable ? (snapshot.TdsPercentage ?? 2m) : null,
             AmountInWords = MSME.StallBooking.SharedKernel.Helpers.NumberToWordsConverter.Convert(snapshot.BaseAmount + gstAmount),
             TaxAmountInWords = MSME.StallBooking.SharedKernel.Helpers.NumberToWordsConverter.Convert(gstAmount),
             Notes = snapshot.Notes,
@@ -474,6 +476,7 @@ public sealed class ProformaInvoice : AuditableEntity
         GstAmount = gstAmount;
         TotalAmount = snapshot.BaseAmount + gstAmount;
         isTdsDeductable = snapshot.isTdsDeductable;
+        TdsPercentage = snapshot.isTdsDeductable ? (snapshot.TdsPercentage ?? 2m) : null;
 
         AmountInWords = MSME.StallBooking.SharedKernel.Helpers.NumberToWordsConverter.Convert(snapshot.BaseAmount + gstAmount);
         TaxAmountInWords = MSME.StallBooking.SharedKernel.Helpers.NumberToWordsConverter.Convert(gstAmount);
@@ -505,9 +508,10 @@ public sealed class ProformaInvoice : AuditableEntity
         HsnSac = hsnSac;
     }
 
-    public void UpdateTdsApplicable(bool isTdsDeductable)
+    public void UpdateTdsApplicable(bool isTdsDeductable, decimal? tdsPercentage = null)
     {
         this.isTdsDeductable = isTdsDeductable;
+        TdsPercentage = isTdsDeductable ? (tdsPercentage ?? TdsPercentage ?? 2m) : null;
     }
 }
 
@@ -533,8 +537,9 @@ public sealed record InvoiceSnapshot(
     string BankAccountNumber,
     string IfscCode,
     string BranchName,
-     string? HsnSac = null,
-    bool isTdsDeductable = false);
+    string? HsnSac = null,
+    bool isTdsDeductable = false,
+    decimal? TdsPercentage = null);
 public sealed class StallInterest : AuditableEntity
 {
     private StallInterest() { }

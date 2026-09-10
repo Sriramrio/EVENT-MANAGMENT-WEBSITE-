@@ -58,8 +58,11 @@ public sealed class ExceptionHandlingMiddleware
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unhandled API exception");
-            await WriteAsync(context, HttpStatusCode.InternalServerError, "INTERNAL_SERVER_ERROR", "An unexpected error occurred. Please contact the administrator with the trace id.", null);
+            _logger.LogError(ex, "Unhandled API exception: {Message}", ex.Message);
+            try {
+                System.IO.File.AppendAllText("last_api_error.log", $"[{DateTime.UtcNow:O}] {ex}\n\n");
+            } catch {}
+            await WriteAsync(context, HttpStatusCode.InternalServerError, "INTERNAL_SERVER_ERROR", ex.Message, new[] { ex.ToString() });
         }
     }
 

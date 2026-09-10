@@ -10,6 +10,13 @@ export function getMenuItems(hasPermission: (permission: string) => boolean, rol
   if (roleCode === 'SellerAdmin') {
     return items.filter(item => item.path === '/app/admin/sellers' || item.path === '/app/admin/seller-requirements');
   }
+  if (roleCode === 'ExhibitorAdmin') {
+    return items.filter(item =>
+      item.path === '/app/admin/exhibitors' ||
+      item.path === '/app/admin/exhibitor-requirements' ||
+      item.path === '/app/admin/exhibitor-email-templates'
+    );
+  }
 
   return items;
 }

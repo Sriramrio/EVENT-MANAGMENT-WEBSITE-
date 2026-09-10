@@ -35,7 +35,7 @@ import {
 import { apiClient, ApiError } from '../../../data/api/apiClient';
 import { PageHeader } from '../../../shared/components/PageHeader';
 import { ImagePreviewModal } from '../../../shared/components/ImagePreviewModal';
-import { RefreshListButton } from '../../../shared/components/RefreshListButton';
+import { ModalPortal } from '../../../shared/components/ModalPortal';
 
 interface RequirementLine {
   id: string;
@@ -92,28 +92,59 @@ interface CatalogItem {
 
 type TabType = 'requests' | 'catalog';
 
-const EXHIBITOR_REQUIREMENTS_KEY = ['admin', 'exhibitor-requirements'] as const;
-const REQUIREMENT_CATALOG_KEY = ['admin', 'additional-requirement-items'] as const;
-const REQUIREMENT_FEATURE_STATUS_KEY = ['admin', 'exhibitor-requirements', 'feature-status'] as const;
-
 export function ExhibitorRequirementsPage() {
-  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<TabType>('requests');
+  const queryClient = useQueryClient();
 
-  // Requests query with 5-minute caching
+  // Requests query with TanStack Query - instant retrieval from cache
   const {
     data: requests = [],
-    isLoading: loadingRequests,
-    isFetching: isFetchingRequests,
-    refetch: refetchRequests,
+    isLoading: loadingRequestsQuery,
+    isFetching: fetchingRequests,
+    refetch: refetchRequests
   } = useQuery({
-    queryKey: EXHIBITOR_REQUIREMENTS_KEY,
-    queryFn: () => apiClient.get<RequirementRequest[]>('/admin/exhibitor-requirements'),
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
+    queryKey: ['admin', 'exhibitor-requirements'],
+    queryFn: async () => {
+      const data = await apiClient.get<RequirementRequest[]>('/admin/exhibitor-requirements');
+      return Array.isArray(data) ? data : [];
+    },
+    staleTime: 60_000,
   });
 
-  // Search & Filter UI state
+  // Catalog items query with TanStack Query
+  const {
+    data: catalogItems = [],
+    isLoading: loadingCatalogQuery,
+    isFetching: fetchingCatalog,
+    refetch: refetchCatalog
+  } = useQuery({
+    queryKey: ['admin', 'additional-requirement-items'],
+    queryFn: async () => {
+      const data = await apiClient.get<CatalogItem[]>('/admin/additional-requirement-items');
+      return Array.isArray(data) ? data : [];
+    },
+    staleTime: 5 * 60_000,
+  });
+
+  // Feature status query with TanStack Query
+  const {
+    data: featureStatusData,
+    refetch: refetchFeatureStatus
+  } = useQuery({
+    queryKey: ['admin', 'exhibitor-requirements-feature-status'],
+    queryFn: async () => {
+      const res = await apiClient.get<{ enabled: boolean }>('/admin/exhibitor-requirements/feature-status');
+      return res;
+    },
+    staleTime: 5 * 60_000,
+  });
+
+  const featureEnabled = featureStatusData?.enabled ?? true;
+
+  // Only show full loading spinner on initial cold load when no cached data exists
+  const loadingRequests = loadingRequestsQuery && requests.length === 0;
+  const loadingCatalog = loadingCatalogQuery && catalogItems.length === 0;
+
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'Pending' | 'Confirmed' | 'Rejected'>('ALL');
   const [selectedCatalogItemId, setSelectedCatalogItemId] = useState<string>('ALL');
@@ -137,19 +168,7 @@ export function ExhibitorRequirementsPage() {
     submitting: false
   });
 
-  // Catalog items query with 5-minute caching
-  const {
-    data: catalogItems = [],
-    isLoading: loadingCatalog,
-    isFetching: isFetchingCatalog,
-    refetch: refetchCatalog,
-  } = useQuery({
-    queryKey: REQUIREMENT_CATALOG_KEY,
-    queryFn: () => apiClient.get<CatalogItem[]>('/admin/additional-requirement-items'),
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
-  });
-
+  // Catalog state
   const [catalogSearchQuery, setCatalogSearchQuery] = useState('');
   const [catalogSortKey, setCatalogSortKey] = useState<
     'sno' | 'code' | 'name' | 'baseAmount' | 'gstPercentage' | 'unitGstAmount' | 'unitTotalAmount' | 'isActive'
@@ -166,7 +185,7 @@ export function ExhibitorRequirementsPage() {
     code: string;
     name: string;
     baseAmount: string;
-    gstPercentage: string;
+    gstPercentage: string; // Default suggested 18
     unit: string;
     stallSize: string;
     imageUrl: string | null;
@@ -204,43 +223,55 @@ export function ExhibitorRequirementsPage() {
   const [globalSuccess, setGlobalSuccess] = useState<string | null>(null);
 
   // Requirements Flow Feature Toggle State (Enable / Disable)
-  const {
-    data: featureStatusData,
-    refetch: refetchFeatureStatus,
-  } = useQuery({
-    queryKey: REQUIREMENT_FEATURE_STATUS_KEY,
-    queryFn: async () => {
-      try {
-        const res = await apiClient.get<{ enabled: boolean }>('/admin/exhibitor-requirements/feature-status');
-        return res ?? { enabled: true };
-      } catch {
-        return { enabled: true };
-      }
-    },
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
-  });
-
-  const featureEnabled = featureStatusData?.enabled ?? true;
   const [togglingFeature, setTogglingFeature] = useState(false);
   const [confirmToggleModal, setConfirmToggleModal] = useState(false);
 
-  // Handle Feature Toggle
+  // Non-blocking Concurrent Refresher
+  const loadAllData = async (_showFullLoader = false) => {
+    setGlobalError(null);
+    await Promise.allSettled([
+      refetchRequests(),
+      refetchCatalog(),
+      refetchFeatureStatus()
+    ]);
+  };
+
+  const loadRequests = () => {
+    void refetchRequests();
+  };
+
+  const loadCatalog = () => {
+    void refetchCatalog();
+  };
+
+  // Handle Feature Toggle with Instant Optimistic Update
   const handleToggleFeature = async () => {
     setTogglingFeature(true);
+    const nextState = !featureEnabled;
+
+    // Optimistically update query cache immediately
+    queryClient.setQueryData<{ enabled: boolean }>(
+      ['admin', 'exhibitor-requirements-feature-status'],
+      { enabled: nextState }
+    );
+    setConfirmToggleModal(false);
+
     try {
       const res = await apiClient.post<{ enabled: boolean; message: string }>(
         '/admin/exhibitor-requirements/feature-status',
-        { enabled: !featureEnabled }
+        { enabled: nextState }
       );
-      queryClient.setQueryData(REQUIREMENT_FEATURE_STATUS_KEY, { enabled: res.enabled });
-      await queryClient.invalidateQueries({ queryKey: REQUIREMENT_FEATURE_STATUS_KEY });
+      queryClient.setQueryData<{ enabled: boolean }>(
+        ['admin', 'exhibitor-requirements-feature-status'],
+        { enabled: res.enabled }
+      );
       setGlobalSuccess(res.message || `Requirements flow is now ${res.enabled ? 'enabled' : 'disabled'}.`);
     } catch (err: any) {
+      // Revert cache on error
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'exhibitor-requirements-feature-status'] });
       setGlobalError(err instanceof ApiError ? err.message : 'Failed to update feature status.');
     } finally {
       setTogglingFeature(false);
-      setConfirmToggleModal(false);
     }
   };
 
@@ -390,26 +421,45 @@ export function ExhibitorRequirementsPage() {
     });
   };
 
-  // Submit Action Modal
+  // Submit Action Modal with Instant Optimistic Update
   const handleStatusActionSubmit = async () => {
     setActionModal((prev) => ({ ...prev, submitting: true }));
     setGlobalError(null);
     setGlobalSuccess(null);
 
-    try {
-      const endpoint = `/admin/exhibitor-requirements/${actionModal.requestId}/${actionModal.action}`;
-      await apiClient.post(endpoint, { callNotes: actionModal.callNotes });
+    const targetReqId = actionModal.requestId;
+    const action = actionModal.action;
+    const targetStatus = action === 'confirm' ? 'Confirmed' : 'Rejected';
+    const notes = actionModal.callNotes;
+    const company = actionModal.companyName;
 
-      setGlobalSuccess(
-        `Requirement request for "${actionModal.companyName}" marked as ${actionModal.action === 'confirm' ? 'Confirmed' : 'Rejected'
-        } successfully.`
+    // Optimistically update the request in the cache immediately so UI reflects instantly (0ms)
+    queryClient.setQueryData<RequirementRequest[]>(['admin', 'exhibitor-requirements'], (old) => {
+      if (!old) return [];
+      return old.map((r) =>
+        r.id === targetReqId
+          ? {
+              ...r,
+              status: targetStatus as any,
+              callNotes: notes,
+              confirmedAt: action === 'confirm' ? new Date().toISOString() : r.confirmedAt
+            }
+          : r
       );
-      setActionModal((prev) => ({ ...prev, isOpen: false }));
-      await queryClient.invalidateQueries({ queryKey: EXHIBITOR_REQUIREMENTS_KEY });
+    });
+
+    setActionModal((prev) => ({ ...prev, isOpen: false, submitting: false }));
+    setGlobalSuccess(
+      `Requirement request for "${company}" marked as ${targetStatus} successfully.`
+    );
+
+    try {
+      const endpoint = `/admin/exhibitor-requirements/${targetReqId}/${action}`;
+      await apiClient.post(endpoint, { callNotes: notes });
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'exhibitor-requirements'] });
     } catch (err: any) {
-      setGlobalError(err instanceof ApiError ? err.message : `Failed to ${actionModal.action} requirement request.`);
-    } finally {
-      setActionModal((prev) => ({ ...prev, submitting: false }));
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'exhibitor-requirements'] });
+      setGlobalError(err instanceof ApiError ? err.message : `Failed to ${action} requirement request.`);
     }
   };
 
@@ -495,10 +545,10 @@ export function ExhibitorRequirementsPage() {
       const matchingLines =
         selectedCatalogItemId !== 'ALL' && selectedCatalogItem
           ? req.lines.filter(
-              (l) =>
-                l.itemId === selectedCatalogItem.id ||
-                l.itemCode.toUpperCase() === selectedCatalogItem.code.toUpperCase()
-            )
+            (l) =>
+              l.itemId === selectedCatalogItem.id ||
+              l.itemCode.toUpperCase() === selectedCatalogItem.code.toUpperCase()
+          )
           : req.lines;
 
       for (const line of matchingLines) {
@@ -902,7 +952,7 @@ export function ExhibitorRequirementsPage() {
       }
 
       setItemModal((prev) => ({ ...prev, isOpen: false }));
-      await queryClient.invalidateQueries({ queryKey: REQUIREMENT_CATALOG_KEY });
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'additional-requirement-items'] });
     } catch (err: any) {
       setItemModal((prev) => ({
         ...prev,
@@ -913,16 +963,26 @@ export function ExhibitorRequirementsPage() {
     }
   };
 
-  // Toggle Item Active / Deactivate
+  // Toggle Item Active / Deactivate with Instant Optimistic Update
   const handleToggleActive = async (item: CatalogItem) => {
+    const nextActive = !item.isActive;
+
+    // Optimistically update query cache immediately
+    queryClient.setQueryData<CatalogItem[]>(['admin', 'additional-requirement-items'], (old) => {
+      if (!old) return [];
+      return old.map((it) => (it.id === item.id ? { ...it, isActive: nextActive } : it));
+    });
+
+    setGlobalSuccess(
+      `Item "${item.name}" ${item.isActive ? 'deactivated' : 'activated'} successfully.`
+    );
+
     try {
       const action = item.isActive ? 'deactivate' : 'activate';
       await apiClient.patch(`/admin/additional-requirement-items/${item.id}/${action}`);
-      await queryClient.invalidateQueries({ queryKey: REQUIREMENT_CATALOG_KEY });
-      setGlobalSuccess(
-        `Item "${item.name}" ${item.isActive ? 'deactivated' : 'activated'} successfully.`
-      );
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'additional-requirement-items'] });
     } catch (err: any) {
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'additional-requirement-items'] });
       setGlobalError(err instanceof ApiError ? err.message : 'Failed to update item status.');
     }
   };
@@ -959,8 +1019,8 @@ export function ExhibitorRequirementsPage() {
             <h1 className="text-xl font-extrabold text-slate-900">Admin Exhibitor Management</h1>
             <span
               className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${featureEnabled
-                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                  : 'bg-rose-50 text-rose-700 border border-rose-200'
+                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                : 'bg-rose-50 text-rose-700 border border-rose-200'
                 }`}
             >
               <span
@@ -977,26 +1037,13 @@ export function ExhibitorRequirementsPage() {
 
         {/* Action Button */}
         <div className="flex items-center gap-2">
-          <RefreshListButton
-            onRefresh={async () => {
-              await Promise.allSettled([
-                refetchRequests(),
-                refetchCatalog(),
-                refetchFeatureStatus(),
-              ]);
-            }}
-            loading={isFetchingRequests || isFetchingCatalog}
-            label="Refresh"
-            title="Fetch latest requests and catalog from database"
-          />
-
           <button
             type="button"
             onClick={() => setConfirmToggleModal(true)}
             disabled={togglingFeature}
-            className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-extrabold shadow-sm transition active:scale-95 cursor-pointer ${featureEnabled
-                ? 'bg-rose-50 border border-rose-300 text-rose-700 hover:bg-rose-100 hover:border-rose-400'
-                : 'bg-emerald-600 text-white hover:bg-emerald-500 shadow-emerald-600/20'
+            className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-extrabold shadow-sm transition active:scale-95 ${featureEnabled
+              ? 'bg-rose-50 border border-rose-300 text-rose-700 hover:bg-rose-100 hover:border-rose-400'
+              : 'bg-emerald-600 text-white hover:bg-emerald-500 shadow-emerald-600/20'
               }`}
           >
             <SlidersHorizontal size={14} />
@@ -1035,8 +1082,8 @@ export function ExhibitorRequirementsPage() {
         <button
           onClick={() => setActiveTab('requests')}
           className={`flex items-center gap-2 px-6 py-3.5 text-sm font-bold border-b-2 transition ${activeTab === 'requests'
-              ? 'border-msme-blue text-msme-blue'
-              : 'border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300'
+            ? 'border-msme-blue text-msme-blue'
+            : 'border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300'
             }`}
         >
           <PackagePlus size={18} />
@@ -1054,8 +1101,8 @@ export function ExhibitorRequirementsPage() {
         <button
           onClick={() => setActiveTab('catalog')}
           className={`flex items-center gap-2 px-6 py-3.5 text-sm font-bold border-b-2 transition ${activeTab === 'catalog'
-              ? 'border-msme-blue text-msme-blue'
-              : 'border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300'
+            ? 'border-msme-blue text-msme-blue'
+            : 'border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300'
             }`}
         >
           <SlidersHorizontal size={18} />
@@ -1186,8 +1233,8 @@ export function ExhibitorRequirementsPage() {
                 type="button"
                 onClick={() => setStatusFilter('ALL')}
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${statusFilter === 'ALL'
-                    ? 'bg-white text-slate-900 shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-white text-slate-900 shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900'
                   }`}
               >
                 All ({counts.all})
@@ -1196,8 +1243,8 @@ export function ExhibitorRequirementsPage() {
                 type="button"
                 onClick={() => setStatusFilter('Pending')}
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${statusFilter === 'Pending'
-                    ? 'bg-amber-500 text-white shadow-sm'
-                    : 'text-amber-800 hover:bg-amber-100/50'
+                  ? 'bg-amber-500 text-white shadow-sm'
+                  : 'text-amber-800 hover:bg-amber-100/50'
                   }`}
               >
                 Pending ({counts.pending})
@@ -1206,8 +1253,8 @@ export function ExhibitorRequirementsPage() {
                 type="button"
                 onClick={() => setStatusFilter('Confirmed')}
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${statusFilter === 'Confirmed'
-                    ? 'bg-emerald-600 text-white shadow-sm'
-                    : 'text-emerald-800 hover:bg-emerald-100/50'
+                  ? 'bg-emerald-600 text-white shadow-sm'
+                  : 'text-emerald-800 hover:bg-emerald-100/50'
                   }`}
               >
                 Confirmed ({counts.confirmed})
@@ -1216,8 +1263,8 @@ export function ExhibitorRequirementsPage() {
                 type="button"
                 onClick={() => setStatusFilter('Rejected')}
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${statusFilter === 'Rejected'
-                    ? 'bg-rose-600 text-white shadow-sm'
-                    : 'text-rose-800 hover:bg-rose-100/50'
+                  ? 'bg-rose-600 text-white shadow-sm'
+                  : 'text-rose-800 hover:bg-rose-100/50'
                   }`}
               >
                 Rejected ({counts.rejected})
@@ -1343,18 +1390,15 @@ export function ExhibitorRequirementsPage() {
               </div>
 
               {/* Refresh Button */}
-              <RefreshListButton
-                onRefresh={async () => {
-                  await Promise.allSettled([
-                    refetchRequests(),
-                    refetchCatalog(),
-                    refetchFeatureStatus(),
-                  ]);
-                }}
-                loading={isFetchingRequests || isFetchingCatalog}
-                label="Refresh"
+              <button
+                type="button"
+                onClick={() => void loadAllData(false)}
+                disabled={fetchingRequests || fetchingCatalog}
+                className="rounded-xl border border-slate-200 bg-white p-2 text-slate-600 hover:bg-slate-50 transition shadow-sm cursor-pointer"
                 title="Refresh Requests and Catalog"
-              />
+              >
+                <RefreshCw size={16} className={fetchingRequests || fetchingCatalog ? 'animate-spin' : ''} />
+              </button>
             </div>
           </div>
 
@@ -1569,17 +1613,20 @@ export function ExhibitorRequirementsPage() {
             </div>
 
             <div className="flex items-center gap-2">
-              <RefreshListButton
-                onRefresh={() => refetchCatalog()}
-                loading={isFetchingCatalog}
-                label="Refresh Catalog"
-                title="Fetch latest catalog from database"
-              />
+              <button
+                type="button"
+                onClick={() => void refetchCatalog()}
+                disabled={fetchingCatalog}
+                className="rounded-xl border border-slate-200 bg-white p-2.5 text-slate-600 hover:bg-slate-50 shadow-sm transition"
+                title="Refresh catalog list"
+              >
+                <RefreshCw size={16} className={fetchingCatalog ? 'animate-spin' : ''} />
+              </button>
 
               <button
                 type="button"
                 onClick={openAddItemModal}
-                className="inline-flex items-center gap-2 rounded-xl bg-msme-blue px-4 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-blue-900 transition active:scale-95 cursor-pointer"
+                className="inline-flex items-center gap-2 rounded-xl bg-msme-blue px-4 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-blue-900 transition active:scale-95"
               >
                 <Plus size={16} /> Add Catalog Item
               </button>
@@ -1844,8 +1891,8 @@ export function ExhibitorRequirementsPage() {
                               type="button"
                               onClick={() => handleToggleActive(item)}
                               className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold transition ${item.isActive
-                                  ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200'
-                                  : 'bg-slate-100 text-slate-500 hover:bg-slate-200 border border-slate-200'
+                                ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200'
+                                : 'bg-slate-100 text-slate-500 hover:bg-slate-200 border border-slate-200'
                                 }`}
                               title="Click to toggle active status"
                             >
@@ -1931,8 +1978,8 @@ export function ExhibitorRequirementsPage() {
                       type="button"
                       onClick={() => setCatalogPage(p)}
                       className={`rounded-lg px-3 py-1 text-xs sm:text-sm font-semibold transition ${p === safeCatalogPage
-                          ? 'bg-msme-blue text-white'
-                          : 'border border-slate-200 text-slate-600 hover:border-msme-blue hover:text-msme-blue'
+                        ? 'bg-msme-blue text-white'
+                        : 'border border-slate-200 text-slate-600 hover:border-msme-blue hover:text-msme-blue'
                         }`}
                     >
                       {p}
@@ -1971,445 +2018,327 @@ export function ExhibitorRequirementsPage() {
 
       {/* MODAL 1: Confirm / Reject with Call Notes */}
       {actionModal.isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl border border-slate-200 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-lg font-bold text-slate-900">
-                {actionModal.action === 'confirm' ? 'Confirm Requirement Request' : 'Reject Requirement Request'}
-              </h3>
-              <button
-                onClick={() => setActionModal((prev) => ({ ...prev, isOpen: false }))}
-                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100"
-              >
-                <X size={18} />
-              </button>
-            </div>
+        <ModalPortal>
+          <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm">
+            <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl border border-slate-200 space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 className="text-lg font-bold text-slate-900">
+                  {actionModal.action === 'confirm' ? 'Confirm Requirement Request' : 'Reject Requirement Request'}
+                </h3>
+                <button
+                  onClick={() => setActionModal((prev) => ({ ...prev, isOpen: false }))}
+                  className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 cursor-pointer"
+                >
+                  <X size={18} />
+                </button>
+              </div>
 
-            <p className="text-xs text-slate-600">
-              You are about to mark the requirement request for{' '}
-              <strong className="text-slate-900">{actionModal.companyName}</strong> as{' '}
-              <span className={`font-bold ${actionModal.action === 'confirm' ? 'text-emerald-700' : 'text-rose-700'}`}>
-                {actionModal.action === 'confirm' ? 'Confirmed' : 'Rejected'}
-              </span>
-              .
-            </p>
+              <p className="text-xs text-slate-600">
+                You are about to mark the requirement request for{' '}
+                <strong className="text-slate-900">{actionModal.companyName}</strong> as{' '}
+                <span className={`font-bold ${actionModal.action === 'confirm' ? 'text-emerald-700' : 'text-rose-700'}`}>
+                  {actionModal.action === 'confirm' ? 'Confirmed' : 'Rejected'}
+                </span>
+                .
+              </p>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                Call Notes / Operation Remarks
-              </label>
-              <textarea
-                rows={4}
-                value={actionModal.callNotes}
-                onChange={(e) => setActionModal((prev) => ({ ...prev, callNotes: e.target.value }))}
-                placeholder="e.g. Spoke with the exhibitor representative on 02-Sep. Confirmed 2 power sockets and 4 extra chairs."
-                className="w-full rounded-xl border border-slate-200 p-3 text-xs text-slate-800 placeholder-slate-400 focus:border-msme-blue focus:outline-none"
-              />
-            </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Call Notes / Operation Remarks
+                </label>
+                <textarea
+                  value={actionModal.callNotes}
+                  onChange={(e) => setActionModal((prev) => ({ ...prev, callNotes: e.target.value }))}
+                  placeholder="e.g. Spoke with the exhibitor representative on 02-Sep. Confirmed 2 power sockets and 4 extra chairs."
+                  rows={4}
+                  className="w-full rounded-xl border border-slate-200 p-3 text-xs text-slate-800 placeholder-slate-400 focus:border-msme-blue focus:outline-none"
+                />
+              </div>
 
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-              <button
-                type="button"
-                onClick={() => setActionModal((prev) => ({ ...prev, isOpen: false }))}
-                className="btn-secondary text-xs"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleStatusActionSubmit}
-                disabled={actionModal.submitting}
-                className={`px-4 py-2 rounded-xl text-xs font-bold text-white shadow-sm transition ${actionModal.action === 'confirm'
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setActionModal((prev) => ({ ...prev, isOpen: false }))}
+                  disabled={actionModal.submitting}
+                  className="btn-secondary text-xs cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleStatusActionSubmit}
+                  disabled={actionModal.submitting}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold text-white shadow-sm transition cursor-pointer ${actionModal.action === 'confirm'
                     ? 'bg-emerald-600 hover:bg-emerald-700'
                     : 'bg-rose-600 hover:bg-rose-700'
-                  }`}
-              >
-                {actionModal.submitting ? 'Saving...' : actionModal.action === 'confirm' ? 'Confirm Request' : 'Reject Request'}
-              </button>
+                    }`}
+                >
+                  {actionModal.submitting ? 'Saving...' : actionModal.action === 'confirm' ? 'Confirm Request' : 'Reject Request'}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        </ModalPortal>
       )}
 
       {/* MODAL 2: Add / Edit Catalog Item - Enlarged with Rich Presets & Sizing Options */}
       {itemModal.isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
-          <form
-            onSubmit={handleItemSave}
-            className="w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-3xl bg-white p-6 sm:p-7 shadow-2xl border border-slate-200 space-y-5"
-          >
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2.5">
-                <div className="h-10 w-10 rounded-xl bg-blue-50 text-msme-blue flex items-center justify-center font-bold">
-                  {itemModal.mode === 'add' ? <PackagePlus size={20} /> : <Edit2 size={18} />}
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-slate-900">
-                    {itemModal.mode === 'add' ? 'Add New Catalog Item' : 'Edit Catalog Item'}
-                  </h3>
-                  <p className="text-xs text-slate-500">
-                    {itemModal.mode === 'add'
-                      ? 'Configure item details, base price, and tax rate for exhibitor booking'
-                      : `Update specifications for item ${itemModal.code}`}
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setItemModal((prev) => ({ ...prev, isOpen: false }))}
-                className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            {itemModal.error && (
-              <div className="rounded-xl bg-rose-50 p-3 text-xs font-semibold text-rose-700 border border-rose-200 flex items-center gap-2">
-                <AlertCircle size={16} className="shrink-0" />
-                <span>{itemModal.error}</span>
-              </div>
-            )}
-
-            {/* Quick Presets (Only in Add mode) */}
-            {itemModal.mode === 'add' && (
-              <div className="rounded-2xl border border-blue-100 bg-blue-50/40 p-3.5 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                    <Sparkles size={14} className="text-msme-blue" />
-                    Quick Item Presets (Click to autofill):
-                  </span>
-                  <span className="text-[11px] text-slate-400 font-medium">Saves time typing</span>
-                </div>
-                <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto pr-1">
-                  {CATALOG_PRESETS.map((preset) => (
-                    <button
-                      key={preset.code}
-                      type="button"
-                      onClick={() => handleApplyPreset(preset)}
-                      className="rounded-lg bg-white border border-slate-200 px-2.5 py-1 text-[11px] font-semibold text-slate-700 hover:border-msme-blue hover:text-msme-blue hover:bg-blue-50/50 transition shadow-2xs"
-                    >
-                      {preset.name} (₹{preset.baseAmount})
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* 2-Column Responsive Layout */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              {/* Left Column: Image Upload & Sizing Applicability */}
-              <div className="space-y-4">
-                {/* Image Upload Input */}
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center justify-between">
-                    <span>
-                      Item Image{' '}
-                      {itemModal.mode === 'add' ? (
-                        <span className="text-rose-500">* (Required)</span>
-                      ) : (
-                        <span className="text-slate-400 font-normal">(Optional change)</span>
-                      )}
-                    </span>
-                  </label>
-
-                  {itemModal.imageUrl ? (
-                    <div className="relative rounded-2xl border border-slate-200 p-3 bg-slate-50 flex items-center gap-3.5">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setPreviewImage({
-                            isOpen: true,
-                            imageUrl: itemModal.imageUrl,
-                            title: itemModal.name || 'Uploaded Item Image',
-                            subtitle: itemModal.code || undefined
-                          })
-                        }
-                        className="group/thumb relative cursor-pointer rounded-xl overflow-hidden border border-slate-300 shadow-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 shrink-0"
-                        title="Click to view full image"
-                      >
-                        <img
-                          src={itemModal.imageUrl}
-                          alt="Preview"
-                          className="h-20 w-20 object-cover transition-transform group-hover/thumb:scale-105"
-                        />
-                        <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/thumb:opacity-100 transition-opacity flex items-center justify-center text-white">
-                          <ZoomIn size={18} />
-                        </div>
-                      </button>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-bold text-slate-800">Image Uploaded</p>
-                        <p className="text-[11px] text-slate-500">Ready to save with item</p>
-                        <label className="mt-2 inline-flex items-center gap-1.5 text-xs font-bold text-msme-blue cursor-pointer hover:underline">
-                          <Upload size={13} /> Change Image
-                          <input
-                            type="file"
-                            accept="image/png, image/jpeg, image/webp"
-                            onChange={handleImageFileChange}
-                            className="hidden"
-                          />
-                        </label>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setItemModal((prev) => ({ ...prev, imageUrl: null }))}
-                        className="rounded-xl p-2 text-rose-500 hover:bg-rose-50 transition"
-                        title="Remove Image"
-                      >
-                        <X size={18} />
-                      </button>
-                    </div>
-                  ) : (
-                    <label className="flex flex-col items-center justify-center gap-2 p-6 rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/60 hover:bg-blue-50/40 hover:border-msme-blue/50 transition cursor-pointer text-center group">
-                      <div className="h-10 w-10 rounded-full bg-white shadow-sm flex items-center justify-center text-slate-500 group-hover:text-msme-blue transition">
-                        <Upload size={20} />
-                      </div>
-                      <div>
-                        <span className="text-xs font-bold text-slate-800 group-hover:text-msme-blue">
-                          Click to upload item image
-                        </span>
-                        <p className="text-[11px] text-slate-400 mt-0.5">PNG, JPG or WEBP (Max 1MB)</p>
-                      </div>
-                      <input
-                        type="file"
-                        accept="image/png, image/jpeg, image/webp"
-                        onChange={handleImageFileChange}
-                        className="hidden"
-                      />
-                    </label>
-                  )}
-                </div>
-
-                {/* Sizing & Unit Options */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
-                      Stall Size Suitability
-                    </label>
-                    <select
-                      value={itemModal.stallSize}
-                      onChange={(e) => setItemModal((prev) => ({ ...prev, stallSize: e.target.value }))}
-                      className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs text-slate-800 focus:border-msme-blue focus:outline-none"
-                    >
-                      <option value="All Sizes">All Sizes (2x2, 3x2, 3x3, etc.)</option>
-                      <option value="2x2">2x2 Stalls</option>
-                      <option value="3x2">3x2 Stalls</option>
-                      <option value="3x3">3x3 Stalls</option>
-                      <option value="4x2">4x2 Stalls</option>
-                      <option value="Custom">Custom / Premium Only</option>
-                    </select>
+        <ModalPortal>
+          <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm">
+            <form
+              onSubmit={handleItemSave}
+              className="w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-3xl bg-white p-6 sm:p-7 shadow-2xl border border-slate-200 space-y-5"
+            >
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="h-10 w-10 rounded-xl bg-blue-50 text-msme-blue flex items-center justify-center font-bold">
+                    {itemModal.mode === 'add' ? <PackagePlus size={20} /> : <Edit2 size={18} />}
                   </div>
-
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
-                      Unit of Measure
-                    </label>
-                    <select
-                      value={itemModal.unit}
-                      onChange={(e) => setItemModal((prev) => ({ ...prev, unit: e.target.value }))}
-                      className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs text-slate-800 focus:border-msme-blue focus:outline-none"
-                    >
-                      <option value="Nos">Per Unit / Nos</option>
-                      <option value="Per Connection">Per Connection</option>
-                      <option value="Per Point">Per Point</option>
-                      <option value="Per Day">Per Day</option>
-                      <option value="Per Event">Per Event (All 3 Days)</option>
-                      <option value="Per Meter">Per Meter</option>
-                      <option value="Per KW">Per KW</option>
-                      <option value="Per Sq.m">Per Sq. Meter</option>
-                      <option value="Per Set">Per Set</option>
-                    </select>
+                    <h3 className="text-lg font-bold text-slate-900">
+                      {itemModal.mode === 'add' ? 'Add New Catalog Item' : 'Edit Catalog Item'}
+                    </h3>
+                    <p className="text-xs text-slate-500">
+                      {itemModal.mode === 'add'
+                        ? 'Configure item details, base price, and tax rate for exhibitor booking'
+                        : `Update specifications for item ${itemModal.code}`}
+                    </p>
                   </div>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setItemModal((prev) => ({ ...prev, isOpen: false }))}
+                  className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 cursor-pointer"
+                >
+                  <X size={20} />
+                </button>
               </div>
 
-              {/* Right Column: Code, Name, Base Amount, GST & Live Price Breakdown */}
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Item Code <span className="text-rose-500">*</span>
-                  </label>
+              {/* Quick presets for Add mode */}
+              {itemModal.mode === 'add' && (
+                <div className="space-y-1.5 bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Quick Presets:</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {CATALOG_PRESETS.map((preset) => (
+                      <button
+                        key={preset.code}
+                        type="button"
+                        onClick={() => handleApplyPreset(preset)}
+                        className="text-[11px] font-medium bg-white hover:bg-blue-50 hover:text-msme-blue hover:border-blue-200 border border-slate-200 px-2.5 py-1 rounded-lg transition"
+                      >
+                        {preset.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Form body */}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700">Item Name *</label>
                   <input
                     type="text"
-                    disabled={itemModal.mode === 'edit'}
-                    value={itemModal.code}
-                    onChange={(e) => setItemModal((prev) => ({ ...prev, code: e.target.value }))}
-                    placeholder="e.g. PWR-5KW, CHAIR-VIP"
-                    className="w-full rounded-xl border border-slate-200 p-2.5 text-xs text-slate-800 uppercase font-mono font-bold disabled:bg-slate-100 focus:border-msme-blue focus:outline-none"
                     required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Item Name / Description <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="text"
                     value={itemModal.name}
                     onChange={(e) => setItemModal((prev) => ({ ...prev, name: e.target.value }))}
-                    placeholder="e.g. 5KW 3-Phase Power Socket"
+                    placeholder="e.g. 15A Power Socket / Spot Light"
                     className="w-full rounded-xl border border-slate-200 p-2.5 text-xs text-slate-800 focus:border-msme-blue focus:outline-none"
-                    required
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
-                      Base Amount (₹) <span className="text-rose-500">*</span>
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0.01"
-                      value={itemModal.baseAmount}
-                      onChange={(e) => setItemModal((prev) => ({ ...prev, baseAmount: e.target.value }))}
-                      placeholder="2500"
-                      className="w-full rounded-xl border border-slate-200 p-2.5 text-xs text-slate-800 font-bold focus:border-msme-blue focus:outline-none"
-                      required
-                    />
-                  </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700">Item Code *</label>
+                  <input
+                    type="text"
+                    required
+                    disabled={itemModal.mode === 'edit'}
+                    value={itemModal.code}
+                    onChange={(e) => setItemModal((prev) => ({ ...prev, code: e.target.value.toUpperCase() }))}
+                    placeholder="e.g. ELEC-01"
+                    className="w-full rounded-xl border border-slate-200 p-2.5 text-xs text-slate-800 font-mono uppercase disabled:bg-slate-100 focus:border-msme-blue focus:outline-none"
+                  />
+                </div>
 
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
-                      GST % (Editable) <span className="text-rose-500">*</span>
-                    </label>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700">Unit of Measurement *</label>
+                  <select
+                    value={itemModal.unit}
+                    onChange={(e) => setItemModal((prev) => ({ ...prev, unit: e.target.value }))}
+                    className="w-full rounded-xl border border-slate-200 p-2.5 text-xs text-slate-800 focus:border-msme-blue focus:outline-none"
+                  >
+                    <option value="Nos">Numbers (Nos)</option>
+                    <option value="Set">Set (Set)</option>
+                    <option value="Per Connection">Per Connection</option>
+                    <option value="Per Point">Per Point</option>
+                    <option value="Per Unit">Per Unit</option>
+                    <option value="Per Day">Per Day</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700">Stall Size Applicability</label>
+                  <select
+                    value={itemModal.stallSize}
+                    onChange={(e) => setItemModal((prev) => ({ ...prev, stallSize: e.target.value }))}
+                    className="w-full rounded-xl border border-slate-200 p-2.5 text-xs text-slate-800 focus:border-msme-blue focus:outline-none"
+                  >
+                    <option value="All Sizes">All Sizes</option>
+                    <option value="3x3">3x3</option>
+                    <option value="6x3">6x3</option>
+                    <option value="9x3">9x3</option>
+                    <option value="12x3">12x3</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700">Base Price (₹) *</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    required
+                    value={itemModal.baseAmount}
+                    onChange={(e) => setItemModal((prev) => ({ ...prev, baseAmount: e.target.value }))}
+                    placeholder="0"
+                    className="w-full rounded-xl border border-slate-200 p-2.5 text-xs text-slate-800 font-mono font-bold focus:border-msme-blue focus:outline-none"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700">GST Rate (%) *</label>
+                  <select
+                    value={itemModal.gstPercentage}
+                    onChange={(e) => setItemModal((prev) => ({ ...prev, gstPercentage: e.target.value }))}
+                    className="w-full rounded-xl border border-slate-200 p-2.5 text-xs text-slate-800 focus:border-msme-blue focus:outline-none"
+                  >
+                    <option value="0">0%</option>
+                    <option value="5">5%</option>
+                    <option value="12">12%</option>
+                    <option value="18">18%</option>
+                    <option value="28">28%</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1 sm:col-span-2">
+                  <label className="text-xs font-bold text-slate-700">Item Image {itemModal.mode === 'add' ? '*' : '(Optional)'}</label>
+                  <div className="flex items-center gap-4">
+                    {itemModal.imageUrl ? (
+                      <div className="relative h-16 w-16 rounded-xl border border-slate-200 overflow-hidden bg-slate-50 shrink-0">
+                        <img src={itemModal.imageUrl} alt="Preview" className="h-full w-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => setItemModal(prev => ({ ...prev, imageUrl: null }))}
+                          className="absolute top-0 right-0 bg-rose-600 text-white p-0.5 rounded-bl text-[10px]"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ) : null}
                     <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={itemModal.gstPercentage}
-                      onChange={(e) => setItemModal((prev) => ({ ...prev, gstPercentage: e.target.value }))}
-                      placeholder="18"
-                      className="w-full rounded-xl border border-slate-200 p-2.5 text-xs text-slate-800 font-bold focus:border-msme-blue focus:outline-none"
-                      required
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageFileChange}
+                      className="text-xs text-slate-500 file:mr-2 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-msme-blue hover:file:bg-blue-100 cursor-pointer"
                     />
                   </div>
                 </div>
 
-                {/* Quick GST Preset Pills */}
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[11px] font-bold text-slate-500">GST Presets:</span>
-                  {['0', '5', '12', '18', '28'].map((rate) => (
-                    <button
-                      key={rate}
-                      type="button"
-                      onClick={() => setItemModal((prev) => ({ ...prev, gstPercentage: rate }))}
-                      className={`px-2 py-0.5 rounded-md text-[11px] font-bold transition ${itemModal.gstPercentage === rate
-                          ? 'bg-msme-blue text-white shadow-2xs'
-                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                        }`}
-                    >
-                      {rate}%
-                    </button>
-                  ))}
+                <div className="sm:col-span-2 p-3 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between text-xs">
+                  <span className="text-slate-500">Calculated Unit Total:</span>
+                  <span className="font-bold text-msme-blue text-sm">
+                    ₹{((parseFloat(itemModal.baseAmount) || 0) * (1 + (parseFloat(itemModal.gstPercentage) || 0) / 100)).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                  </span>
                 </div>
 
-                {/* Live Calculation Preview Card */}
-                {(() => {
-                  const b = parseFloat(itemModal.baseAmount) || 0;
-                  const g = parseFloat(itemModal.gstPercentage) || 0;
-                  const tax = Math.round(b * (g / 100) * 100) / 100;
-                  const tot = b + tax;
-
-                  return (
-                    <div className="rounded-2xl bg-gradient-to-br from-blue-50/80 to-indigo-50/60 p-3.5 border border-blue-100 text-xs space-y-1.5 shadow-2xs">
-                      <div className="flex justify-between text-slate-600 font-medium">
-                        <span>Base Price ({itemModal.unit || 'Unit'}):</span>
-                        <span className="font-semibold text-slate-800">₹{b.toLocaleString('en-IN')}</span>
-                      </div>
-                      <div className="flex justify-between text-slate-600 font-medium">
-                        <span>GST ({g}%):</span>
-                        <span className="font-semibold text-slate-800">₹{tax.toLocaleString('en-IN')}</span>
-                      </div>
-                      <div className="flex justify-between font-bold text-msme-blue border-t border-blue-200/80 pt-1.5">
-                        <span className="text-xs uppercase tracking-wide">Total Per Unit:</span>
-                        <span className="text-sm font-black">₹{tot.toLocaleString('en-IN')}</span>
-                      </div>
-                    </div>
-                  );
-                })()}
+                {itemModal.error && (
+                  <div className="sm:col-span-2 rounded-xl bg-rose-50 border border-rose-200 p-2.5 text-xs text-rose-700 font-medium">
+                    {itemModal.error}
+                  </div>
+                )}
               </div>
-            </div>
 
-            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
-              <button
-                type="button"
-                onClick={() => setItemModal((prev) => ({ ...prev, isOpen: false }))}
-                className="btn-secondary text-xs px-4 py-2.5"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={itemModal.submitting}
-                className="btn-primary text-xs px-5 py-2.5 shadow-sm"
-              >
-                {itemModal.submitting
-                  ? 'Saving...'
-                  : itemModal.mode === 'add'
-                    ? 'Create Catalog Item'
-                    : 'Save Changes'}
-              </button>
-            </div>
-          </form>
-        </div>
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setItemModal((prev) => ({ ...prev, isOpen: false }))}
+                  className="btn-secondary text-xs cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={itemModal.submitting}
+                  className="btn-primary text-xs px-5 py-2.5 shadow-sm cursor-pointer"
+                >
+                  {itemModal.submitting
+                    ? 'Saving...'
+                    : itemModal.mode === 'add'
+                      ? 'Create Catalog Item'
+                      : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </ModalPortal>
       )}
 
       {/* Confirmation Modal for Toggling Feature Flow */}
       {confirmToggleModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 backdrop-blur-xs p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-slate-200 space-y-4 animate-in zoom-in-95 duration-200">
-            <div className="flex items-center gap-3">
-              <div
-                className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${featureEnabled ? 'bg-rose-100 text-rose-600' : 'bg-emerald-100 text-emerald-600'
-                  }`}
-              >
-                <SlidersHorizontal size={22} />
+        <ModalPortal>
+          <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm">
+            <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-slate-200 space-y-4 animate-in zoom-in-95 duration-200">
+              <div className="flex items-center gap-3">
+                <div
+                  className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${featureEnabled ? 'bg-rose-100 text-rose-600' : 'bg-emerald-100 text-emerald-600'
+                    }`}
+                >
+                  <SlidersHorizontal size={22} />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">
+                    {featureEnabled ? 'Disable Requirements Flow?' : 'Enable Requirements Flow?'}
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Action affects all logged-in exhibitors
+                  </p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-base font-bold text-slate-900">
-                  {featureEnabled ? 'Disable Requirements Flow?' : 'Enable Requirements Flow?'}
-                </h3>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Action affects all logged-in exhibitors
-                </p>
-              </div>
-            </div>
 
-            <p className="text-xs leading-relaxed text-slate-600">
-              {featureEnabled
-                ? 'When disabled, exhibitors will see the requirements portal blurred with a disabled notice overlay and will not be able to browse the catalog or submit new requests.'
-                : 'When enabled, exhibitors will be able to browse additional items, select quantities, and submit requirement requests normally.'}
-            </p>
+              <p className="text-xs leading-relaxed text-slate-600">
+                {featureEnabled
+                  ? 'When disabled, exhibitors will see the requirements portal blurred with a disabled notice overlay and will not be able to browse the catalog or submit new requests.'
+                  : 'When enabled, exhibitors will be able to browse additional items, select quantities, and submit requirement requests normally.'}
+              </p>
 
-            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
-              <button
-                type="button"
-                onClick={() => setConfirmToggleModal(false)}
-                disabled={togglingFeature}
-                className="btn-secondary text-xs"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleToggleFeature}
-                disabled={togglingFeature}
-                className={`text-xs font-bold px-4 py-2 rounded-xl transition ${featureEnabled
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setConfirmToggleModal(false)}
+                  disabled={togglingFeature}
+                  className="btn-secondary text-xs cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleToggleFeature}
+                  disabled={togglingFeature}
+                  className={`text-xs font-bold px-4 py-2 rounded-xl transition cursor-pointer ${featureEnabled
                     ? 'bg-rose-600 hover:bg-rose-700 text-white'
                     : 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                  }`}
-              >
-                {togglingFeature
-                  ? 'Updating...'
-                  : featureEnabled
-                    ? 'Confirm Disable'
-                    : 'Confirm Enable'}
-              </button>
+                    }`}
+                >
+                  {togglingFeature
+                    ? 'Updating...'
+                    : featureEnabled
+                      ? 'Confirm Disable'
+                      : 'Confirm Enable'}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        </ModalPortal>
       )}
 
       {/* Image Full-Size Preview Modal */}

@@ -15,7 +15,7 @@ export class ApiAuthRepository implements AuthRepository {
 
 export class StallMaster {
   list(): Promise<Stall[]> {
-    return apiClient.get<Stall[]>(`${eventPath}/stalls`);
+    return apiClient.get<Stall[]>(`${eventPath}/stalls?_t=${Date.now()}`);
 
   }
   create(request: StallForm): Promise<StallForm> {
@@ -30,8 +30,6 @@ export class ApiBookingRepository implements BookingRepository {
     const query = status === 'All' ? '' : `?status=${encodeURIComponent(status)}`;
 
     const rows = await apiClient.get<any[]>(`${eventPath}/bookings${query}`);
-
-    console.log('RAW BOOKING ROWS', rows);
 
     return rows.map(row => ({
       id: row.id ?? '',
@@ -94,7 +92,7 @@ export class ApiBookingRepository implements BookingRepository {
       gstin: row.gstin ?? '',
       totalPaidAmount: row.totalPaidAmount ?? row.total_paid_amount ?? 0,
       balanceDueAmount: row.balanceDueAmount ?? row.balance_due_amount ?? 0,
-     lubMember: row.lubMember ?? false,
+      lubMember: row.lubMember ?? false,
       tanNumber: row.tanNumber ?? null,
     } as unknown as StallBooking & {
       companyName?: string;
@@ -112,25 +110,27 @@ export class ApiBookingRepository implements BookingRepository {
     return apiClient.get<StallBooking>(`${eventPath}/bookings/${id}`);
   }
 
-blockStall(
-  bookingId: string,
-  stallId: string,
-  actorUserId: string,
-  targetSponsorTotal?: number,
-  isGstApplicable?: boolean,
-  isTdsDeductable?: boolean
-): Promise<void> {
-  return apiClient.post(
-    `${eventPath}/bookings/${bookingId}/block-stall`,
-    {
-      stallId,
-      actorUserId,
-      targetSponsorTotal: targetSponsorTotal ?? null,
-      isGstApplicable: isGstApplicable ?? false,
-      isTdsDeductable: isTdsDeductable ?? false,
-    }
-  );
-}
+  blockStall(
+    bookingId: string,
+    stallId: string,
+    actorUserId: string,
+    targetSponsorTotal?: number,
+    isGstApplicable?: boolean,
+    isTdsDeductable?: boolean,
+    tdsPercentage?: number
+  ): Promise<void> {
+    return apiClient.post(
+      `${eventPath}/bookings/${bookingId}/block-stall`,
+      {
+        stallId,
+        actorUserId,
+        targetSponsorTotal: targetSponsorTotal ?? null,
+        isGstApplicable: isGstApplicable ?? false,
+        isTdsDeductable: isTdsDeductable ?? false,
+        tdsPercentage: tdsPercentage ?? null,
+      }
+    );
+  }
 
   releaseStall(bookingId: string, actorUserId: string, reason: string): Promise<void> {
     return apiClient.post<void>(`${eventPath}/bookings/${bookingId}/release-stall`, {
@@ -185,12 +185,12 @@ export class ApiPaymentRepository implements PaymentRepository {
       amountPaid: number;
       remarks: string;
       overrideExpiredBlock: boolean;
-       isTdsDeductable: boolean;
-       TargetSponsorTotal:number|null;
-       isGstApplicable:boolean;
-       gstType:string;
-       gstAmount:string
-
+      isTdsDeductable: boolean;
+      tdsPercentage?: number;
+      TargetSponsorTotal: number | null;
+      isGstApplicable: boolean;
+      gstType: string;
+      gstAmount: string;
     }
   ): Promise<void> {
     return apiClient.post<void>(
@@ -204,8 +204,8 @@ export class ApiInvoiceRepository implements InvoiceRepository {
   generate(bookingId: string, actorUserId: string): Promise<ProformaInvoice> {
     return apiClient.post<ProformaInvoice>(`${eventPath}/bookings/${bookingId}/proforma-invoice/generate`, { actorUserId });
   }
-  markSent(invoiceId: string, actorUserId: string): Promise<void> {
-    return apiClient.post<void>(`${eventPath}/invoices/${invoiceId}/send-email`, { actorUserId });
+  markSent(invoiceId: string, actorUserId: string): Promise<any> {
+    return apiClient.post<any>(`${eventPath}/invoices/${invoiceId}/send-email`, { actorUserId });
   }
   sendProforma(bookingId: string, actorUserId: string): Promise<void> {
     return apiClient.post<void>(

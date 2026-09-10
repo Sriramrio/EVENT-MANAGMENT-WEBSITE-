@@ -89,7 +89,7 @@ public sealed class SendCustomEmailRequest
     public string? ReplyToEmail { get; set; }
     public string? ReplyToName { get; set; }
     public string? TemplateCode { get; set; }
-    
+
     // Auto-save as new template option
     public bool SaveAsNewTemplate { get; set; } = false;
     public string? NewTemplateCode { get; set; }
@@ -716,190 +716,190 @@ public sealed class EmailTemplateManagementController : ControllerBase
         switch (request.RecipientType.ToLowerInvariant())
         {
             case "all_exhibitors":
-            {
-                var exhibitors = await _db.Exhibitors
-                    .AsNoTracking()
-                    .Where(x => !string.IsNullOrWhiteSpace(x.Email))
-                    .ToListAsync(ct);
-
-                var stallMapData = await (
-                    from b in _db.StallBookings.AsNoTracking()
-                    join s in _db.Stalls.AsNoTracking() on b.AllocatedStallId equals s.Id
-                    where b.AllocatedStallId != null
-                    select new { b.ExhibitorId, s.StallNumber }
-                ).ToListAsync(ct);
-
-                var stallMap = stallMapData
-                    .GroupBy(x => x.ExhibitorId)
-                    .ToDictionary(g => g.Key, g => string.Join(", ", g.Select(x => x.StallNumber)));
-
-                foreach (var ex in exhibitors)
                 {
-                    stallMap.TryGetValue(ex.Id, out var stallNum);
-                    recipientTargets.Add(new RecipientContactData
+                    var exhibitors = await _db.Exhibitors
+                        .AsNoTracking()
+                        .Where(x => !string.IsNullOrWhiteSpace(x.Email))
+                        .ToListAsync(ct);
+
+                    var stallMapData = await (
+                        from b in _db.StallBookings.AsNoTracking()
+                        join s in _db.Stalls.AsNoTracking() on b.AllocatedStallId equals s.Id
+                        where b.AllocatedStallId != null
+                        select new { b.ExhibitorId, s.StallNumber }
+                    ).ToListAsync(ct);
+
+                    var stallMap = stallMapData
+                        .GroupBy(x => x.ExhibitorId)
+                        .ToDictionary(g => g.Key, g => string.Join(", ", g.Select(x => x.StallNumber)));
+
+                    foreach (var ex in exhibitors)
                     {
-                        Email = ex.Email.Trim().ToLowerInvariant(),
-                        Name = !string.IsNullOrWhiteSpace(ex.ContactPersonName) ? ex.ContactPersonName : ex.LegalName,
-                        Company = ex.LegalName,
-                        StallNumber = stallNum ?? "Pending Allocation",
-                        RoleOrCategory = "Exhibitor"
-                    });
+                        stallMap.TryGetValue(ex.Id, out var stallNum);
+                        recipientTargets.Add(new RecipientContactData
+                        {
+                            Email = ex.Email.Trim().ToLowerInvariant(),
+                            Name = !string.IsNullOrWhiteSpace(ex.ContactPersonName) ? ex.ContactPersonName : ex.LegalName,
+                            Company = ex.LegalName,
+                            StallNumber = stallNum ?? "Pending Allocation",
+                            RoleOrCategory = "Exhibitor"
+                        });
+                    }
+                    break;
                 }
-                break;
-            }
 
             case "allocated_exhibitors":
-            {
-                var allocatedData = await (
-                    from b in _db.StallBookings.AsNoTracking()
-                    join ex in _db.Exhibitors.AsNoTracking() on b.ExhibitorId equals ex.Id
-                    join s in _db.Stalls.AsNoTracking() on b.AllocatedStallId equals s.Id
-                    where b.AllocatedStallId != null && !string.IsNullOrWhiteSpace(ex.Email)
-                    select new
-                    {
-                        ex.Email,
-                        Name = !string.IsNullOrWhiteSpace(ex.ContactPersonName) ? ex.ContactPersonName : ex.LegalName,
-                        Company = ex.LegalName,
-                        s.StallNumber
-                    }
-                ).ToListAsync(ct);
-
-                foreach (var item in allocatedData)
                 {
-                    recipientTargets.Add(new RecipientContactData
-                    {
-                        Email = item.Email.Trim().ToLowerInvariant(),
-                        Name = item.Name,
-                        Company = item.Company,
-                        StallNumber = item.StallNumber,
-                        RoleOrCategory = "Exhibitor"
-                    });
-                }
-                break;
-            }
+                    var allocatedData = await (
+                        from b in _db.StallBookings.AsNoTracking()
+                        join ex in _db.Exhibitors.AsNoTracking() on b.ExhibitorId equals ex.Id
+                        join s in _db.Stalls.AsNoTracking() on b.AllocatedStallId equals s.Id
+                        where b.AllocatedStallId != null && !string.IsNullOrWhiteSpace(ex.Email)
+                        select new
+                        {
+                            ex.Email,
+                            Name = !string.IsNullOrWhiteSpace(ex.ContactPersonName) ? ex.ContactPersonName : ex.LegalName,
+                            Company = ex.LegalName,
+                            s.StallNumber
+                        }
+                    ).ToListAsync(ct);
 
-            case "all_visitors":
-            {
-                var visitors = await _db.Visitors
-                    .AsNoTracking()
-                    .Where(x => !string.IsNullOrWhiteSpace(x.Email))
-                    .ToListAsync(ct);
-
-                foreach (var v in visitors)
-                {
-                    recipientTargets.Add(new RecipientContactData
-                    {
-                        Email = v.Email.Trim().ToLowerInvariant(),
-                        Name = !string.IsNullOrWhiteSpace(v.ContactPersonName) ? v.ContactPersonName : v.LegalName,
-                        Company = v.LegalName,
-                        StallNumber = "-",
-                        RoleOrCategory = "Visitor"
-                    });
-                }
-                break;
-            }
-
-            case "marketplace_buyers":
-            {
-                var buyers = await _db.Organizations
-                    .AsNoTracking()
-                    .Where(x => (x.OrganizationType == "BUYER" || x.OrganizationType == "BOTH") && !string.IsNullOrWhiteSpace(x.Email))
-                    .ToListAsync(ct);
-
-                foreach (var b in buyers)
-                {
-                    recipientTargets.Add(new RecipientContactData
-                    {
-                        Email = b.Email.Trim().ToLowerInvariant(),
-                        Name = b.LegalName,
-                        Company = b.LegalName,
-                        StallNumber = "-",
-                        RoleOrCategory = "Marketplace Buyer"
-                    });
-                }
-                break;
-            }
-
-            case "marketplace_sellers":
-            {
-                var sellers = await _db.Organizations
-                    .AsNoTracking()
-                    .Where(x => (x.OrganizationType == "SELLER" || x.OrganizationType == "BOTH") && !string.IsNullOrWhiteSpace(x.Email))
-                    .ToListAsync(ct);
-
-                foreach (var s in sellers)
-                {
-                    recipientTargets.Add(new RecipientContactData
-                    {
-                        Email = s.Email.Trim().ToLowerInvariant(),
-                        Name = s.LegalName,
-                        Company = s.LegalName,
-                        StallNumber = "-",
-                        RoleOrCategory = "Marketplace Seller"
-                    });
-                }
-                break;
-            }
-
-            case "vips":
-            {
-                var vips = await _db.Vip
-                    .AsNoTracking()
-                    .Where(x => !string.IsNullOrWhiteSpace(x.Email))
-                    .ToListAsync(ct);
-
-                foreach (var vp in vips)
-                {
-                    recipientTargets.Add(new RecipientContactData
-                    {
-                        Email = vp.Email.Trim().ToLowerInvariant(),
-                        Name = !string.IsNullOrWhiteSpace(vp.Name) ? vp.Name : (!string.IsNullOrWhiteSpace(vp.ContactPersonName) ? vp.ContactPersonName : "VIP Guest"),
-                        Company = vp.Organization ?? "VIP Guest",
-                        StallNumber = "-",
-                        RoleOrCategory = "VIP Guest"
-                    });
-                }
-                break;
-            }
-
-            case "selected_recipients":
-            {
-                foreach (var email in request.SelectedRecipientEmails)
-                {
-                    if (IsValidEmail(email))
+                    foreach (var item in allocatedData)
                     {
                         recipientTargets.Add(new RecipientContactData
                         {
-                            Email = email.Trim().ToLowerInvariant(),
-                            Name = email.Split('@')[0],
-                            Company = "Valued Partner",
-                            StallNumber = "-",
-                            RoleOrCategory = "Selected Contact"
+                            Email = item.Email.Trim().ToLowerInvariant(),
+                            Name = item.Name,
+                            Company = item.Company,
+                            StallNumber = item.StallNumber,
+                            RoleOrCategory = "Exhibitor"
                         });
                     }
+                    break;
                 }
-                break;
-            }
+
+            case "all_visitors":
+                {
+                    var visitors = await _db.Visitors
+                        .AsNoTracking()
+                        .Where(x => !string.IsNullOrWhiteSpace(x.Email))
+                        .ToListAsync(ct);
+
+                    foreach (var v in visitors)
+                    {
+                        recipientTargets.Add(new RecipientContactData
+                        {
+                            Email = v.Email.Trim().ToLowerInvariant(),
+                            Name = !string.IsNullOrWhiteSpace(v.ContactPersonName) ? v.ContactPersonName : v.LegalName,
+                            Company = v.LegalName,
+                            StallNumber = "-",
+                            RoleOrCategory = "Visitor"
+                        });
+                    }
+                    break;
+                }
+
+            case "marketplace_buyers":
+                {
+                    var buyers = await _db.Organizations
+                        .AsNoTracking()
+                        .Where(x => (x.OrganizationType == "BUYER" || x.OrganizationType == "BOTH") && !string.IsNullOrWhiteSpace(x.Email))
+                        .ToListAsync(ct);
+
+                    foreach (var b in buyers)
+                    {
+                        recipientTargets.Add(new RecipientContactData
+                        {
+                            Email = b.Email.Trim().ToLowerInvariant(),
+                            Name = b.LegalName,
+                            Company = b.LegalName,
+                            StallNumber = "-",
+                            RoleOrCategory = "Marketplace Buyer"
+                        });
+                    }
+                    break;
+                }
+
+            case "marketplace_sellers":
+                {
+                    var sellers = await _db.Organizations
+                        .AsNoTracking()
+                        .Where(x => (x.OrganizationType == "SELLER" || x.OrganizationType == "BOTH") && !string.IsNullOrWhiteSpace(x.Email))
+                        .ToListAsync(ct);
+
+                    foreach (var s in sellers)
+                    {
+                        recipientTargets.Add(new RecipientContactData
+                        {
+                            Email = s.Email.Trim().ToLowerInvariant(),
+                            Name = s.LegalName,
+                            Company = s.LegalName,
+                            StallNumber = "-",
+                            RoleOrCategory = "Marketplace Seller"
+                        });
+                    }
+                    break;
+                }
+
+            case "vips":
+                {
+                    var vips = await _db.Vip
+                        .AsNoTracking()
+                        .Where(x => !string.IsNullOrWhiteSpace(x.Email))
+                        .ToListAsync(ct);
+
+                    foreach (var vp in vips)
+                    {
+                        recipientTargets.Add(new RecipientContactData
+                        {
+                            Email = vp.Email.Trim().ToLowerInvariant(),
+                            Name = !string.IsNullOrWhiteSpace(vp.Name) ? vp.Name : (!string.IsNullOrWhiteSpace(vp.ContactPersonName) ? vp.ContactPersonName : "VIP Guest"),
+                            Company = vp.Organization ?? "VIP Guest",
+                            StallNumber = "-",
+                            RoleOrCategory = "VIP Guest"
+                        });
+                    }
+                    break;
+                }
+
+            case "selected_recipients":
+                {
+                    foreach (var email in request.SelectedRecipientEmails)
+                    {
+                        if (IsValidEmail(email))
+                        {
+                            recipientTargets.Add(new RecipientContactData
+                            {
+                                Email = email.Trim().ToLowerInvariant(),
+                                Name = email.Split('@')[0],
+                                Company = "Valued Partner",
+                                StallNumber = "-",
+                                RoleOrCategory = "Selected Contact"
+                            });
+                        }
+                    }
+                    break;
+                }
 
             case "custom_list":
             default:
-            {
-                foreach (var email in request.CustomEmails)
                 {
-                    if (IsValidEmail(email))
+                    foreach (var email in request.CustomEmails)
                     {
-                        recipientTargets.Add(new RecipientContactData
+                        if (IsValidEmail(email))
                         {
-                            Email = email.Trim().ToLowerInvariant(),
-                            Name = email.Split('@')[0],
-                            Company = "Valued Partner",
-                            StallNumber = "-",
-                            RoleOrCategory = "Custom Recipient"
-                        });
+                            recipientTargets.Add(new RecipientContactData
+                            {
+                                Email = email.Trim().ToLowerInvariant(),
+                                Name = email.Split('@')[0],
+                                Company = "Valued Partner",
+                                StallNumber = "-",
+                                RoleOrCategory = "Custom Recipient"
+                            });
+                        }
                     }
+                    break;
                 }
-                break;
-            }
         }
 
         // Deduplicate recipients by email

@@ -20,12 +20,16 @@ interface PaymentSummaryRow {
   expectedTotalAmount: number;
   isGstApplicable: boolean;
   isTdsDeducted: boolean;
+  tdsPercentage?: number;
   tanNumber: string;
   tdsDeductionAmount: number;
   netBankReceivableAfterTds: number;
   summary: {
     totalBankPaid: number;
     balanceRemaining: number;
+    excessAmount?: number;
+    hasExcessPayment?: boolean;
+    paymentStatus?: string;
     isFullySettled: boolean;
     paymentCount: number;
   };
@@ -38,18 +42,21 @@ interface PaymentSummaryMetrics {
   totalNetReceivables: number;
   totalBankReceived: number;
   totalOutstandingBalance: number;
+  totalExcessPaid?: number;
+  totalExcessPaymentsCount?: number;
 }
 
 interface PaymentSummaryResponse {
   metrics: PaymentSummaryMetrics;
   totalFullySettled: number;
   totalPendingSettlement: number;
+  totalExcessSettlement?: number;
   data: PaymentSummaryRow[];
 }
 
-type SortKey = 'booking' | 'expected' | 'tds' | 'netReceivable' | 'paid' | 'balance';
+type SortKey = 'booking' | 'expected' | 'tds' | 'netReceivable' | 'paid' | 'excess' | 'balance';
 type SortDirection = 'asc' | 'desc';
-type SettlementFilter = 'All' | 'Settled' | 'Pending';
+type SettlementFilter = 'All' | 'Settled' | 'Pending' | 'Excess';
 type TdsFilter = 'All' | 'Deducted' | 'NotDeducted';
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
@@ -127,9 +134,11 @@ export function PaymentSummaryPage() {
 
     // Settlement Filter
     if (settlementFilter === 'Settled') {
-      filtered = filtered.filter(r => r.summary.isFullySettled);
+      filtered = filtered.filter(r => r.summary.isFullySettled && !(r.summary.excessAmount && r.summary.excessAmount > 0));
     } else if (settlementFilter === 'Pending') {
       filtered = filtered.filter(r => !r.summary.isFullySettled);
+    } else if (settlementFilter === 'Excess') {
+      filtered = filtered.filter(r => (r.summary.excessAmount ?? 0) > 0);
     }
 
     // TDS Status Filter
@@ -156,6 +165,11 @@ export function PaymentSummaryPage() {
           return (a.netBankReceivableAfterTds - b.netBankReceivableAfterTds) * directionMultiplier;
         case 'paid':
           return (a.summary.totalBankPaid - b.summary.totalBankPaid) * directionMultiplier;
+        case 'excess': {
+          const aExcess = a.summary.excessAmount ?? 0;
+          const bExcess = b.summary.excessAmount ?? 0;
+          return (aExcess - bExcess) * directionMultiplier;
+        }
         case 'balance':
           return (a.summary.balanceRemaining - b.summary.balanceRemaining) * directionMultiplier;
         default:
@@ -225,33 +239,38 @@ export function PaymentSummaryPage() {
       'Target Sponsor Amount',
       'Expected Amount',
       'Is TDS Deducted',
+      'TDS %',
       'Is Gst Applicable',
       'TAN Number',
       'TDS Deduction Amount',
       'Net Bank Receivable',
       'Total Bank Paid',
+      'Excess Paid',
       'Balance Remaining',
       'Status',
     ];
 
-    const csvRows = visibleRows.map(r => [
-      `"${r.bookingRegistrationNumber || ''}"`,
-      `"${r.stallNumber || ''}"`,
-      `"${r.stallSize || ''}"`,
-      r.isSponsor ? 'Yes' : 'No',
-      r.targetSponsorAmount || 0,
-      r.expectedTotalAmount || 0,
-      r.isTdsDeducted ? 'Yes' : 'No',
-      r.isGstApplicable || false,
-      r.tanNumber || 0,
-      r.tdsDeductionAmount || 0,
-
-
-      r.netBankReceivableAfterTds || 0,
-      r.netBankReceivableAfterTds || 0,
-      r.summary?.balanceRemaining || 0,
-      r.summary?.isFullySettled ? 'Confirmed' : 'Payment Submitted',
-    ]);
+    const csvRows = visibleRows.map(r => {
+      const excess = r.summary?.excessAmount || 0;
+      return [
+        `"${r.bookingRegistrationNumber || ''}"`,
+        `"${r.stallNumber || ''}"`,
+        `"${r.stallSize || ''}"`,
+        r.isSponsor ? 'Yes' : 'No',
+        r.targetSponsorAmount || 0,
+        r.expectedTotalAmount || 0,
+        r.isTdsDeducted ? 'Yes' : 'No',
+        r.tdsPercentage || (r.isTdsDeducted ? 2 : 0),
+        r.isGstApplicable ? 'Yes' : 'No',
+        `"${r.tanNumber || ''}"`,
+        r.tdsDeductionAmount || 0,
+        r.netBankReceivableAfterTds || 0,
+        r.summary?.totalBankPaid || 0,
+        excess,
+        r.summary?.balanceRemaining || 0,
+        excess > 0 ? 'Excess Paid' : (r.summary?.isFullySettled ? 'Confirmed' : 'Payment Submitted'),
+      ];
+    });
 
     const csvContent = [headers.join(','), ...csvRows.map(row => row.join(','))].join('\n');
 
@@ -306,6 +325,15 @@ export function PaymentSummaryPage() {
           <span className="font-bold text-amber-600">{response?.totalPendingSettlement ?? '—'}</span>{' '}
           pending settlement
         </span>
+        {Number(response?.totalExcessSettlement ?? 0) > 0 && (
+          <>
+            <span className="text-slate-300">•</span>
+            <span>
+              <span className="font-bold text-purple-600">{response?.totalExcessSettlement}</span>{' '}
+              excess paid ({formatInr(response?.metrics?.totalExcessPaid || 0)})
+            </span>
+          </>
+        )}
       </div>
 
       {/* Search & Filters */}
@@ -328,6 +356,7 @@ export function PaymentSummaryPage() {
             <option value="All">All Settlement Status</option>
             <option value="Settled">Fully Settled</option>
             <option value="Pending">Pending Settlement</option>
+            <option value="Excess">Excess Paid Only</option>
           </select>
 
           {/* TDS Filter */}
@@ -435,97 +464,133 @@ export function PaymentSummaryPage() {
               )}
 
               {!loading &&
-                paginatedRows.map(row => (
-                  <tr key={`${row.bookingId}-${row.stallNumber}`} className="border-t">
-                    <td className="p-4 font-semibold">
-                      {row.bookingRegistrationNumber}
-                      <div className="mt-0.5 text-xs font-normal text-slate-500">
-                        {row.stallNumber} • {row.stallSize}
-                      </div>
-                    </td>
-
-                    <td className="p-4">
-                      {row.isSponsor ? (
-                        <div>
-                          <div className="font-semibold text-purple-700">
-                            {formatInr(row.targetSponsorAmount || row.expectedTotalAmount)}
-                          </div>
-                          <span className="inline-flex items-center rounded bg-purple-50 px-1.5 py-0.5 text-[10px] font-bold text-purple-700 ring-1 ring-inset ring-purple-600/20">
-                            Sponsor Target
-                          </span>
+                paginatedRows.map(row => {
+                  const excess = row.summary?.excessAmount || 0;
+                  return (
+                    <tr key={`${row.bookingId}-${row.stallNumber}`} className="border-t">
+                      <td className="p-4 font-semibold">
+                        {row.bookingRegistrationNumber}
+                        <div className="mt-0.5 text-xs font-normal text-slate-500">
+                          {row.stallNumber} • {row.stallSize}
                         </div>
-                      ) : (
-                        <div>
-                          <div className="font-semibold text-slate-900">
-                            {formatInr(row.expectedTotalAmount)}
-                          </div>
-                          <div className="mt-0.5 text-xs text-slate-400">
-                            Base {formatInr(row.baseAmount)} + GST {formatInr(row.gstAmount)}
-                          </div>
-                        </div>
-                      )}
-                    </td>
+                      </td>
 
-                    <td className="p-4">
-                      {row.isTdsDeducted ? (
-                        <span className="inline-flex items-center rounded bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
-                          TDS Deducted
-                        </span>
-                      ) : (
-                        <div>
-                          <span className="inline-flex items-center rounded bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-700 ring-1 ring-inset ring-amber-600/20">
-                            {row.isSponsor ? 'TDS Not Deducted' : 'To Deduct (2%)'}
-                          </span>
-                          {!row.isSponsor && row.tdsDeductionAmount > 0 && (
-                            <div className="mt-0.5 text-xs font-bold text-slate-700">
-                              {formatInr(row.tdsDeductionAmount)}
+                      <td className="p-4">
+                        {row.isSponsor ? (
+                          <div>
+                            <div className="font-semibold text-purple-700">
+                              {formatInr(row.targetSponsorAmount || row.expectedTotalAmount)}
                             </div>
-                          )}
+                            <span className="inline-flex items-center rounded bg-purple-50 px-1.5 py-0.5 text-[10px] font-bold text-purple-700 ring-1 ring-inset ring-purple-600/20">
+                              Sponsor Target
+                            </span>
+                          </div>
+                        ) : (
+                          <div>
+                            <div className="font-semibold text-slate-900">
+                              {formatInr(row.expectedTotalAmount)}
+                            </div>
+                            <div className="mt-0.5 text-xs text-slate-400">
+                              Base {formatInr(row.baseAmount)} + GST {formatInr(row.gstAmount)}
+                            </div>
+                          </div>
+                        )}
+                      </td>
+
+                      <td className="p-4">
+                        {row.isTdsDeducted ? (
+                          <div>
+                            <span className="inline-flex items-center rounded bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
+                              TDS Deducted ({row.tdsPercentage || 2}%)
+                            </span>
+                            {row.tdsDeductionAmount > 0 && (
+                              <div className="mt-0.5 text-xs font-bold text-slate-700">
+                                {formatInr(row.tdsDeductionAmount)}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div>
+                            <span className="inline-flex items-center rounded bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-700 ring-1 ring-inset ring-amber-600/20">
+                              {row.isSponsor ? 'TDS Not Deducted' : `To Deduct (${row.tdsPercentage || 2}%)`}
+                            </span>
+                            {!row.isSponsor && row.tdsDeductionAmount > 0 && (
+                              <div className="mt-0.5 text-xs font-bold text-slate-700">
+                                {formatInr(row.tdsDeductionAmount)}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </td>
+                      <td className="p-4">
+                        {row.isGstApplicable ? (
+                          <span className="inline-flex items-center rounded bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
+                            GST Applicable
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center rounded bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-500 ring-1 ring-inset ring-slate-500/20">
+                            GST Not Applicable
+                          </span>
+                        )}
+                      </td>
+                      <td className="p-4 font-semibold text-slate-900">
+                        {row.tanNumber || "—"}
+                      </td>
+                      <td className="p-4 font-semibold text-slate-900">
+                        {formatInr(row.netBankReceivableAfterTds)}
+                      </td>
+
+                      <td className="p-4">
+                        <div className="font-semibold text-emerald-600">
+                          {formatInr(row.summary?.totalBankPaid || 0)}
                         </div>
-                      )}
-                    </td>
-                    <td className="p-4">
-                      {row.isGstApplicable ? (
-                        <span className="inline-flex items-center rounded bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
-                          GST Applicable
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center rounded bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-500 ring-1 ring-inset ring-slate-500/20">
-                          GST Not Applicable
-                        </span>
-                      )}
-                    </td>
-                    <td className="p-4 font-semibold text-slate-900">
-                      {row.tanNumber || "—"}
-                    </td>
-                    <td className="p-4 font-semibold text-slate-900">
-                      {formatInr(row.netBankReceivableAfterTds)}
-                    </td>
+                        {excess > 0 && (
+                          <div className="mt-1">
+                            <span className="inline-flex items-center rounded bg-purple-50 px-2 py-0.5 text-[11px] font-bold text-purple-700 ring-1 ring-inset ring-purple-600/20">
+                              +{formatInr(excess)} Excess
+                            </span>
+                          </div>
+                        )}
+                        {row.summary?.paymentCount > 0 && (
+                          <div className="mt-0.5 text-xs font-normal text-slate-400">
+                            {row.summary.paymentCount} payment
+                            {row.summary.paymentCount > 1 ? 's' : ''}
+                          </div>
+                        )}
+                      </td>
 
-                    <td className="p-4 font-semibold text-emerald-600">
-                      {formatInr(row.netBankReceivableAfterTds)}
-                      {row.summary.paymentCount > 0 && (
-                        <div className="mt-0.5 text-xs font-normal text-slate-400">
-                          {row.summary.paymentCount} payment
-                          {row.summary.paymentCount > 1 ? 's' : ''}
-                        </div>
-                      )}
-                    </td>
+                      <td className="p-4 font-semibold">
+                        {excess > 0 ? (
+                          <div>
+                            <span className="text-purple-700 font-bold">
+                              +{formatInr(excess)}
+                            </span>
+                            <div className="text-[11px] font-medium text-purple-600">Excess Received</div>
+                          </div>
+                        ) : row.summary?.balanceRemaining > 0 ? (
+                          <span className="text-amber-600">
+                            {formatInr(row.summary.balanceRemaining)}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
+                      </td>
 
-                    <td className="p-4 font-semibold text-amber-600">
-                      {row.summary.balanceRemaining > 0
-                        ? formatInr(row.summary.balanceRemaining)
-                        : '—'}
-                    </td>
+                      <td className="p-4">
+                        {excess > 0 ? (
+                          <span className="inline-flex items-center rounded-full bg-purple-50 px-2.5 py-1 text-xs font-bold text-purple-700 ring-1 ring-inset ring-purple-600/20">
+                            Excess Paid
+                          </span>
+                        ) : (
+                          <StatusBadge
+                            value={row.summary?.isFullySettled ? 'Confirmed' : 'PaymentSubmitted'}
+                          />
+                        )}
+                      </td>
 
-                    <td className="p-4">
-                      <StatusBadge
-                        value={row.summary.isFullySettled ? 'Confirmed' : 'PaymentSubmitted'}
-                      />
-                    </td>
-
-                  </tr>
-                ))}
+                    </tr>
+                  );
+                })}
 
               {!loading && visibleRows.length === 0 && (
                 <tr>

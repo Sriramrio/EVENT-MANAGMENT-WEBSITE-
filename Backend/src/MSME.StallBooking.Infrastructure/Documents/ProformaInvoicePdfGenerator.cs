@@ -13,22 +13,28 @@ public sealed class ProformaInvoicePdfGenerator : IProformaInvoicePdfGenerator
     private readonly string _expoLogoPath;
 
     private static readonly HashSet<Guid> SpecialTenPercentTdsBookingIds = new()
-    {
-        Guid.Parse("4ecd38a9-f92f-4adb-91e8-88811e2acddf"),
-        Guid.Parse("e56f2543-0404-4c26-a858-3c694ea142b0"),
-        Guid.Parse("fe3552d8-9ae6-4e34-98b0-b59bd07f5fc4"),
-        Guid.Parse("b9d1751b-b17d-401c-be0b-a8aacc1beacd"),
-        Guid.Parse("3cc38899-cb26-4282-9cf9-9aa5fd04b46f")
-    };
+   {
+       Guid.Parse("4ecd38a9-f92f-4adb-91e8-88811e2acddf"),
+       Guid.Parse("e56f2543-0404-4c26-a858-3c694ea142b0"),
+       Guid.Parse("fe3552d8-9ae6-4e34-98b0-b59bd07f5fc4"),
+       Guid.Parse("b9d1751b-b17d-401c-be0b-a8aacc1beacd"),
+       Guid.Parse("3cc38899-cb26-4282-9cf9-9aa5fd04b46f"),
+        Guid.Parse("ebd776e9-c540-41f9-aabb-7c374251c13f"),
+        Guid.Parse("40f09360-8694-4e6a-97ec-ee7c29a0b31f")
+   };
 
-    private static readonly string[] SpecialTenPercentTdsBookingRegNumbers = new[]
-    {
-        "MSME-HOSUR-20260716-7695",
-        "MSME-HOSUR-20260820-107",
-        "MSME-HOSUR-20260731-043",
-        "MSME-HOSUR-20260829-129",
-        "MSME-HOSUR-20260829-130"
-    };
+
+
+    private static readonly HashSet<string> SpecialTenPercentTdsBookingRegNumbers = new(StringComparer.OrdinalIgnoreCase)
+   {
+       "MSME-HOSUR-20260716-7695",
+       "MSME-HOSUR-20260820-107",
+       "MSME-HOSUR-20260731-043",
+       "MSME-HOSUR-20260829-129",
+       "MSME-HOSUR-20260829-130",
+       "MSME-HOSUR-20260904-157",
+       "MSME-HOSUR-20260907-172"
+   };
 
     private static bool IsTenPercentTdsInvoice(ProformaInvoice invoice) =>
         SpecialTenPercentTdsBookingIds.Contains(invoice.BookingId) ||
@@ -163,8 +169,9 @@ public sealed class ProformaInvoicePdfGenerator : IProformaInvoicePdfGenerator
 
         var isTenPercentTds = IsTenPercentTdsInvoice(invoice);
         var isTdsApplicable = invoice.isTdsDeductable || isTenPercentTds;
-        var tdsRate = isTenPercentTds ? 0.10m : 0.02m;
-        var tdsLabel = isTenPercentTds ? "10%" : "2%";
+        var effectiveTdsPercentage = invoice.TdsPercentage ?? (isTenPercentTds ? 10m : 2m);
+        var tdsRate = effectiveTdsPercentage / 100m;
+        var tdsLabel = $"{effectiveTdsPercentage:0.##}%";
 
         // ============================================================
         // AREA / RATE PER SQ.M (derived from BASE amount, excl. GST)

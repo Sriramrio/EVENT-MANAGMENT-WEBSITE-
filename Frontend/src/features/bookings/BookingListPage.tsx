@@ -11,6 +11,7 @@ import { ChevronDown, Eye, InfoIcon, QrCode, Trash2 } from 'lucide-react';
 import { EmailStallCardBooking, EmailStallCardModal } from './EmailStallCardModal';
 import { StallQrModal } from './StallQrModal';
 import { RefreshListButton } from '../../shared/components/RefreshListButton';
+import { ModalPortal } from '../../shared/components/ModalPortal';
 
 type ExpiryFilter = 'All' | 'Active' | 'Expired' | 'No Expiry' | 'Confirmed';
 type SortKey =
@@ -291,13 +292,18 @@ export function BookingListPage() {
     }
   }
 
+  const allocatedCount = useMemo(() => {
+    return bookings.filter(b => Boolean(b.bookingStatus) && b.bookingStatus !== 'Submitted').length;
+  }, [bookings]);
+
   const statusOptions = useMemo(() => {
     const statuses = bookings
       .map(booking => booking.bookingStatus)
       //@ts-ignore
       .filter((status): status is string => Boolean(status));
 
-    return ['All', ...Array.from(new Set(statuses))];
+    const unique = Array.from(new Set(statuses));
+    return ['All', 'Allocated', ...unique];
   }, [bookings]);
 
   const districtOptions = useMemo(() => {
@@ -401,7 +407,9 @@ export function BookingListPage() {
 
       const matchesStatus =
         statusFilter === 'All' ||
-        booking.bookingStatus === statusFilter;
+        (statusFilter === 'Allocated'
+          ? booking.bookingStatus !== 'Submitted'
+          : booking.bookingStatus === statusFilter);
 
       const expiryTime = booking.blockExpiresAt
         ? new Date(booking.blockExpiresAt).getTime()
@@ -1431,6 +1439,16 @@ export function BookingListPage() {
       {/* Status counts */}
       {Object.keys(statusCounts).length > 0 && (
         <div className="mt-4 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setStatusFilter('Allocated')}
+            className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${statusFilter === 'Allocated'
+              ? 'border-msme-blue bg-msme-blue text-white'
+              : 'border-slate-200 bg-white text-slate-600 hover:border-msme-blue hover:text-msme-blue'
+              }`}
+          >
+            Allocated: {allocatedCount}
+          </button>
           {Object.entries(statusCounts).map(([status, count]) => (
             <button
               key={status}
@@ -1485,7 +1503,9 @@ export function BookingListPage() {
                 <option key={status} value={status}>
                   {status === 'All'
                     ? `All Statuses (${bookings.length})`
-                    : `${getDisplayStatus(status)} (${statusCounts[status] ?? 0})`}
+                    : status === 'Allocated'
+                      ? `Allocated (${allocatedCount})`
+                      : `${getDisplayStatus(status)} (${statusCounts[status] ?? 0})`}
                 </option>
               ))}
             </select>
@@ -1931,80 +1951,83 @@ export function BookingListPage() {
         </div>
 
         {viewBooking && (
-          <div
-            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4"
-            onClick={() => setViewBooking(null)}
-          >
+          <ModalPortal>
             <div
-              className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl"
-              onClick={event => event.stopPropagation()}
+              className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+              onClick={() => setViewBooking(null)}
             >
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="text-lg font-bold text-slate-900">Booking Details</h3>
-                  <p className="mt-0.5 text-sm text-slate-500">
-                    {viewBooking.bookingRegistrationNumber}
-                  </p>
+              <div
+                className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl"
+                onClick={event => event.stopPropagation()}
+              >
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-900">Booking Details</h3>
+                    <p className="mt-0.5 text-sm text-slate-500">
+                      {viewBooking.bookingRegistrationNumber}
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setViewBooking(null)}
+                    className="text-xl leading-none text-slate-400 hover:text-slate-700"
+                    aria-label="Close"
+                  >
+                    ×
+                  </button>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => setViewBooking(null)}
-                  className="text-xl leading-none text-slate-400 hover:text-slate-700"
-                  aria-label="Close"
-                >
-                  ×
-                </button>
-              </div>
+                <div className="mt-4 grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
+                  <DetailRow label="Company Name" value={viewBooking.companyName} />
+                  <DetailRow label="Fascia Name" value={viewBooking.fasciaName} />
+                  <DetailRow label="Contact Person" value={viewBooking.contactPerson} />
+                  <DetailRow label="Email" value={viewBooking.email} />
+                  <DetailRow label="Mobile" value={viewBooking.mobile} />
+                  <DetailRow label="Status" value={<StatusBadge value={getDisplayStatus(viewBooking.bookingStatus)} />} />                <DetailRow
+                    label="Expected Amount"
+                    value={`₹${Number(viewBooking.expectedAmount || 0).toLocaleString('en-IN')}`}
+                  />
+                  <DetailRow label="Stall Number" value={viewBooking.stallNumber || '—'} />
+                  <DetailRow label="Stall Size" value={viewBooking.stallSizeCode || viewBooking.stallSizeName} />
+                  <DetailRow label="District" value={viewBooking.district || '—'} />
+                  <DetailRow label="GSTIN" value={viewBooking.gstin || '—'} />
+                  <DetailRow label="PAN" value={viewBooking.panNumber || '—'} />
+                  <DetailRow label="Udyam No." value={viewBooking.udyamRegistrationNumber || '—'} />
+                  <DetailRow
+                    label="Block Expires"
+                    value={
+                      viewBooking.blockExpiresAt
+                        ? new Date(viewBooking.blockExpiresAt).toLocaleString()
+                        : '—'
+                    }
+                  />
+                </div>
 
-              <div className="mt-4 grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
-                <DetailRow label="Company Name" value={viewBooking.companyName} />
-                <DetailRow label="Fascia Name" value={viewBooking.fasciaName} />
-                <DetailRow label="Contact Person" value={viewBooking.contactPerson} />
-                <DetailRow label="Email" value={viewBooking.email} />
-                <DetailRow label="Mobile" value={viewBooking.mobile} />
-                <DetailRow label="Status" value={<StatusBadge value={getDisplayStatus(viewBooking.bookingStatus)} />} />                <DetailRow
-                  label="Expected Amount"
-                  value={`₹${Number(viewBooking.expectedAmount || 0).toLocaleString('en-IN')}`}
-                />
-                <DetailRow label="Stall Number" value={viewBooking.stallNumber || '—'} />
-                <DetailRow label="Stall Size" value={viewBooking.stallSizeCode || viewBooking.stallSizeName} />
-                <DetailRow label="District" value={viewBooking.district || '—'} />
-                <DetailRow label="GSTIN" value={viewBooking.gstin || '—'} />
-                <DetailRow label="PAN" value={viewBooking.panNumber || '—'} />
-                <DetailRow label="Udyam No." value={viewBooking.udyamRegistrationNumber || '—'} />
-                <DetailRow
-                  label="Block Expires"
-                  value={
-                    viewBooking.blockExpiresAt
-                      ? new Date(viewBooking.blockExpiresAt).toLocaleString()
-                      : '—'
-                  }
-                />
-              </div>
-
-              <div className="mt-6 flex justify-end">
-                <button
-                  type="button"
-                  className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-slate-300"
-                  onClick={() => setViewBooking(null)}
-                >
-                  Close
-                </button>
+                <div className="mt-6 flex justify-end">
+                  <button
+                    type="button"
+                    className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-slate-300"
+                    onClick={() => setViewBooking(null)}
+                  >
+                    Close
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
+          </ModalPortal>
         )}
 
         {actionButton && (
-          <div
-            className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm"
-            onClick={() => setShowActionButton(null)}
-          >
+          <ModalPortal>
             <div
-              className="w-full max-w-3xl overflow-hidden rounded-3xl bg-white shadow-2xl ring-1 ring-black/5"
-              onClick={event => event.stopPropagation()}
+              className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+              onClick={() => setShowActionButton(null)}
             >
+              <div
+                className="w-full max-w-3xl overflow-hidden rounded-3xl bg-white shadow-2xl ring-1 ring-black/5"
+                onClick={event => event.stopPropagation()}
+              >
               {/* ================= HEADER ================= */}
               <div className="border-b border-slate-100 bg-gradient-to-br from-slate-50 to-white px-6 py-5 sm:px-7">
                 <div className="flex items-start justify-between gap-4">
@@ -2619,18 +2642,20 @@ export function BookingListPage() {
               </div>
             </div>
           </div>
+          </ModalPortal>
         )}
 
         {/* Bulk Action Confirmation Modal */}
         {bulkModalConfig.isOpen && (
-          <div
-            className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm"
-            onClick={() => setBulkModalConfig({ isOpen: false, type: null })}
-          >
+          <ModalPortal>
             <div
-              className="w-full max-w-md overflow-hidden rounded-3xl bg-white p-6 shadow-2xl ring-1 ring-black/5"
-              onClick={e => e.stopPropagation()}
+              className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+              onClick={() => setBulkModalConfig({ isOpen: false, type: null })}
             >
+              <div
+                className="w-full max-w-md overflow-hidden rounded-3xl bg-white p-6 shadow-2xl ring-1 ring-black/5"
+                onClick={e => e.stopPropagation()}
+              >
               <div className="flex items-start justify-between">
                 <div>
                   <h3 className="text-lg font-bold text-slate-900">
@@ -2711,6 +2736,7 @@ export function BookingListPage() {
               </div>
             </div>
           </div>
+          </ModalPortal>
         )}
 
         {/* Pagination controls */}
@@ -2839,62 +2865,64 @@ export function BookingListPage() {
 
       {/* Extend block expiry modal */}
       {extendTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
-          <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-xl">
-            <h3 className="font-bold text-slate-900">
-              Extend Block Expiry
-            </h3>
+        <ModalPortal>
+          <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+            <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-xl">
+              <h3 className="font-bold text-slate-900">
+                Extend Block Expiry
+              </h3>
 
-            <p className="mt-1 text-sm text-slate-500">
-              {extendTarget.bookingRegistrationNumber || 'This booking'}
-              {' — current expiry: '}
-              {extendTarget.blockExpiresAt
-                ? new Date(extendTarget.blockExpiresAt).toLocaleString()
-                : '—'}
-            </p>
-
-            <label
-              htmlFor="new-expiry-at"
-              className="mt-4 block text-xs font-semibold uppercase tracking-wide text-slate-500"
-            >
-              New Expiry Date &amp; Time
-            </label>
-
-            <input
-              id="new-expiry-at"
-              type="datetime-local"
-              value={newExpiryAt}
-              onChange={event => setNewExpiryAt(event.target.value)}
-              className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-msme-blue focus:ring-2 focus:ring-msme-blue/10"
-            />
-
-            {extendError && (
-              <p className="mt-2 text-sm font-semibold text-red-600">
-                {extendError}
+              <p className="mt-1 text-sm text-slate-500">
+                {extendTarget.bookingRegistrationNumber || 'This booking'}
+                {' — current expiry: '}
+                {extendTarget.blockExpiresAt
+                  ? new Date(extendTarget.blockExpiresAt).toLocaleString()
+                  : '—'}
               </p>
-            )}
 
-            <div className="mt-5 flex justify-end gap-2">
-              <button
-                type="button"
-                disabled={extending}
-                onClick={closeExtendModal}
-                className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+              <label
+                htmlFor="new-expiry-at"
+                className="mt-4 block text-xs font-semibold uppercase tracking-wide text-slate-500"
               >
-                Cancel
-              </button>
+                New Expiry Date &amp; Time
+              </label>
 
-              <button
-                type="button"
-                disabled={extending}
-                onClick={submitExtend}
-                className="rounded-lg bg-msme-blue px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {extending ? 'Extending...' : 'Confirm Extend'}
-              </button>
+              <input
+                id="new-expiry-at"
+                type="datetime-local"
+                value={newExpiryAt}
+                onChange={event => setNewExpiryAt(event.target.value)}
+                className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-msme-blue focus:ring-2 focus:ring-msme-blue/10"
+              />
+
+              {extendError && (
+                <p className="mt-2 text-sm font-semibold text-red-600">
+                  {extendError}
+                </p>
+              )}
+
+              <div className="mt-5 flex justify-end gap-2">
+                <button
+                  type="button"
+                  disabled={extending}
+                  onClick={closeExtendModal}
+                  className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="button"
+                  disabled={extending}
+                  onClick={submitExtend}
+                  className="rounded-lg bg-msme-blue px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {extending ? 'Extending...' : 'Confirm Extend'}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        </ModalPortal>
       )}
     </div>
   );

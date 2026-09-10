@@ -68,7 +68,6 @@ public sealed class StallAllocationController : ControllerBase
         return Accepted(new { message = "Stall blocked and payment request email queued." });
     }
     [HttpPost("stalls/{stallId:guid}/release-block")]
-    [Authorize]
     public async Task<IActionResult> ReleaseBlock(
     Guid eventId,
     Guid bookingId,
@@ -246,3 +245,4 @@ public sealed class StallAllocationController : ControllerBase
 public sealed record BlockStallRequest(Guid TenantId, Guid StallId, Guid ActorUserId);
 public sealed record VerifyPaymentRequest(Guid TenantId, Guid ActorUserId, decimal ExpectedAmount, bool OverrideExpiredBlock);
 public sealed record GenerateInvoiceRequest(Guid TenantId, Guid ActorUserId);
+

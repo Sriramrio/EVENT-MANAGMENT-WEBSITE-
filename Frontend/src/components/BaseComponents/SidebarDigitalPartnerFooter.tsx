@@ -65,7 +65,7 @@ export const SidebarDigitalPartnerFooter: React.FC<SidebarDigitalPartnerFooterPr
                   </span>
                   Digital Support
                 </span>
-                <span className="text-xs font-bold text-slate-800 group-hover:text-blue-900">
+                <span className="whitespace-nowrap font-mono text-xs font-bold text-slate-800 group-hover:text-blue-900">
                   {helplineNumber}
                 </span>
               </div>
@@ -128,7 +128,7 @@ export const SidebarDigitalPartnerFooter: React.FC<SidebarDigitalPartnerFooterPr
                 </span>
                 Digital Support
               </span>
-              <span className="text-xs font-black text-white group-hover:text-cyan-200">
+              <span className="whitespace-nowrap font-mono text-xs font-black text-white group-hover:text-cyan-200">
                 {helplineNumber}
               </span>
             </div>

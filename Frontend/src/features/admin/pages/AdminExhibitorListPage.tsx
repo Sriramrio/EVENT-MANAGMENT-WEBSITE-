@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
     Building2,
     Search,
@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 import { apiClient, ApiError } from '../../../data/api/apiClient';
 import { PageHeader } from '../../../shared/components/PageHeader';
-import { RefreshListButton } from '../../../shared/components/RefreshListButton';
+import { ModalPortal } from '../../../shared/components/ModalPortal';
 
 export interface AdminExhibitor {
     id: string;
@@ -91,30 +91,38 @@ type SortKey =
 
 type SortDirection = 'asc' | 'desc';
 
-const ADMIN_EXHIBITORS_QUERY_KEY = ['admin', 'exhibitors'] as const;
-
 export function AdminExhibitorListPage() {
+    const queryClient = useQueryClient();
+
+    // TanStack Query cache: instant 0ms load on tab switch with background revalidation
     const {
         data: exhibitors = [],
-        isLoading: loading,
+        isLoading,
         isFetching,
         error: queryError,
-        refetch,
+        refetch
     } = useQuery({
-        queryKey: ADMIN_EXHIBITORS_QUERY_KEY,
-        queryFn: () => apiClient.get<AdminExhibitor[]>('/admin/exhibitors'),
-        staleTime: 5 * 60 * 1000,
-        gcTime: 10 * 60 * 1000,
+        queryKey: ['admin', 'exhibitors'],
+        queryFn: async () => {
+            const data = await apiClient.get<AdminExhibitor[]>('/admin/exhibitors');
+            return Array.isArray(data) ? data : [];
+        },
+        staleTime: 60_000,
     });
 
-    const error = queryError instanceof Error ? queryError.message : queryError ? 'Failed to load exhibitors.' : null;
+    // Loading spinner is only shown on initial cold load when no cached data exists
+    const loading = isLoading && exhibitors.length === 0;
+    const error = queryError ? (queryError instanceof ApiError ? queryError.message : 'Failed to load exhibitors.') : null;
+
+    const loadExhibitors = () => {
+        void refetch();
+    };
 
     // Search & Filters State
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('ALL');
     const [selectedState, setSelectedState] = useState('ALL');
     const [lubFilter, setLubFilter] = useState<'ALL' | 'MEMBER' | 'NON_MEMBER'>('ALL');
-    const [bookingFilter, setBookingFilter] = useState<'ALL' | 'BOOKED' | 'UNBOOKED'>('ALL');
 
     // Sorting State
     const [sortKey, setSortKey] = useState<SortKey>('legalName');
@@ -127,37 +135,52 @@ export function AdminExhibitorListPage() {
     // View Details Modal State (Read-only)
     const [selectedExhibitor, setSelectedExhibitor] = useState<AdminExhibitor | null>(null);
 
+    // Base paid & allocated exhibitors (strictly those with an allocated stall number, active booking, and verified payment)
+    const allocatedExhibitors = useMemo(() => {
+        return exhibitors.filter((e) =>
+            !!e.stallNumber &&
+            !!e.bookingId &&
+            (e.totalPaid ?? 0) > 0 &&
+            (e.paymentStatus || '').toLowerCase() !== 'unpaid'
+        );
+    }, [exhibitors]);
+
     // Derived filter options
     const categories = useMemo(() => {
         const set = new Set<string>();
-        exhibitors.forEach((e) => {
+        allocatedExhibitors.forEach((e) => {
             if (e.industryCategory?.trim()) set.add(e.industryCategory.trim());
         });
         return Array.from(set).sort((a, b) => a.localeCompare(b));
-    }, [exhibitors]);
+    }, [allocatedExhibitors]);
 
     const states = useMemo(() => {
         const set = new Set<string>();
-        exhibitors.forEach((e) => {
+        allocatedExhibitors.forEach((e) => {
             if (e.state?.trim()) set.add(e.state.trim());
         });
         return Array.from(set).sort((a, b) => a.localeCompare(b));
-    }, [exhibitors]);
+    }, [allocatedExhibitors]);
 
     // Metrics
     const metrics = useMemo(() => {
-        const total = exhibitors.length;
-        const lubCount = exhibitors.filter((e) => e.lubMember).length;
-        const withStalls = exhibitors.filter((e) => !!e.stallNumber).length;
-        const bookedCount = exhibitors.filter((e) => !!e.bookingId).length;
+        const total = allocatedExhibitors.length;
+        const lubCount = allocatedExhibitors.filter((e) => e.lubMember).length;
+        const fullyPaidCount = allocatedExhibitors.filter((e) => (e.paymentStatus || '').toLowerCase() === 'fully paid').length;
         const uniqueCategories = categories.length;
 
-        return { total, lubCount, withStalls, bookedCount, uniqueCategories };
-    }, [exhibitors, categories]);
+        return { total, lubCount, fullyPaidCount, uniqueCategories };
+    }, [allocatedExhibitors, categories]);
 
     // Filtering
     const filteredExhibitors = useMemo(() => {
-        return exhibitors.filter((item) => {
+        return allocatedExhibitors.filter((item) => {
+            // Must have a valid booking, assigned stall, and verified payment that is not cancelled
+            if (!item.bookingId || !item.stallNumber) return false;
+            if ((item.totalPaid || 0) <= 0 || (item.paymentStatus || '').toLowerCase() === 'unpaid') return false;
+            const bStatus = (item.bookingStatus || '').toLowerCase();
+            if (bStatus === 'cancelled' || bStatus === 'releasedduetononpayment') return false;
+
             // Search query filter
             if (searchQuery.trim()) {
                 const q = searchQuery.toLowerCase().trim();
@@ -193,13 +216,9 @@ export function AdminExhibitorListPage() {
             if (lubFilter === 'MEMBER' && !item.lubMember) return false;
             if (lubFilter === 'NON_MEMBER' && item.lubMember) return false;
 
-            // Booking filter
-            if (bookingFilter === 'BOOKED' && !item.bookingId) return false;
-            if (bookingFilter === 'UNBOOKED' && item.bookingId) return false;
-
             return true;
         });
-    }, [exhibitors, searchQuery, selectedCategory, selectedState, lubFilter, bookingFilter]);
+    }, [allocatedExhibitors, searchQuery, selectedCategory, selectedState, lubFilter]);
 
     // Sorting
     const sortedExhibitors = useMemo(() => {
@@ -357,15 +376,13 @@ export function AdminExhibitorListPage() {
         searchQuery.trim() !== '' ||
         selectedCategory !== 'ALL' ||
         selectedState !== 'ALL' ||
-        lubFilter !== 'ALL' ||
-        bookingFilter !== 'ALL';
+        lubFilter !== 'ALL';
 
     const resetFilters = () => {
         setSearchQuery('');
         setSelectedCategory('ALL');
         setSelectedState('ALL');
         setLubFilter('ALL');
-        setBookingFilter('ALL');
         setPage(1);
     };
 
@@ -373,30 +390,30 @@ export function AdminExhibitorListPage() {
         <div className="space-y-6 pb-12">
             {/* Page Header */}
             <PageHeader
-                title="Exhibitor Directory & Details"
-                description="Comprehensive view of all registered exhibitors, company profiles, contact details, tax registrations, and stall allocations."
+                title="Paid Exhibitor Directory & Details"
+                description="Comprehensive directory of exhibitors with verified payments, confirmed allocated stalls, company profiles, contact details, tax registrations, and stall locations."
             />
 
             {/* Top Metric Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {/* Card 1: Total Exhibitors */}
+                {/* Card 1: Paid Exhibitors */}
                 <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs hover:shadow-md transition">
                     <div className="flex items-center justify-between">
                         <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                            Total Exhibitors
+                            Paid Exhibitors
                         </span>
-                        <div className="h-10 w-10 rounded-xl bg-blue-50 text-msme-blue flex items-center justify-center font-bold shadow-xs">
-                            <Building2 size={20} />
+                        <div className="h-10 w-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold shadow-xs">
+                            <Store size={20} />
                         </div>
                     </div>
                     <div className="mt-3 flex items-baseline gap-2">
-                        <span className="text-3xl font-black text-slate-900">
+                        <span className="text-3xl font-black text-emerald-700">
                             {metrics.total.toLocaleString('en-IN')}
                         </span>
-                        <span className="text-xs font-semibold text-slate-500">registered</span>
+                        <span className="text-xs font-semibold text-slate-500">paid & allocated</span>
                     </div>
                     <p className="mt-2 text-[11px] text-slate-500">
-                        {metrics.bookedCount} with active stall bookings
+                        Exhibitors with verified payment and allocated stall
                     </p>
                 </div>
 
@@ -423,24 +440,24 @@ export function AdminExhibitorListPage() {
                     </p>
                 </div>
 
-                {/* Card 3: Stalls Allocated */}
+                {/* Card 3: Fully Paid */}
                 <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs hover:shadow-md transition">
                     <div className="flex items-center justify-between">
                         <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                            Stalls Allocated
+                            Fully Paid
                         </span>
-                        <div className="h-10 w-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold shadow-xs">
-                            <Store size={20} />
+                        <div className="h-10 w-10 rounded-xl bg-blue-50 text-msme-blue flex items-center justify-center font-bold shadow-xs">
+                            <CreditCard size={20} />
                         </div>
                     </div>
                     <div className="mt-3 flex items-baseline gap-2">
-                        <span className="text-3xl font-black text-emerald-700">
-                            {metrics.withStalls.toLocaleString('en-IN')}
+                        <span className="text-3xl font-black text-slate-900">
+                            {metrics.fullyPaidCount.toLocaleString('en-IN')}
                         </span>
-                        <span className="text-xs font-semibold text-slate-500">allocated</span>
+                        <span className="text-xs font-semibold text-slate-500">completed</span>
                     </div>
                     <p className="mt-2 text-[11px] text-slate-500">
-                        Exhibitors assigned confirmed stall numbers
+                        Exhibitors with verified full payment
                     </p>
                 </div>
 
@@ -474,8 +491,8 @@ export function AdminExhibitorListPage() {
                     </div>
                     <button
                         type="button"
-                        onClick={() => refetch()}
-                        className="rounded-lg bg-rose-600 px-3 py-1 text-white hover:bg-rose-700 cursor-pointer"
+                        onClick={loadExhibitors}
+                        className="rounded-lg bg-rose-600 px-3 py-1 text-white hover:bg-rose-700"
                     >
                         Retry
                     </button>
@@ -519,18 +536,21 @@ export function AdminExhibitorListPage() {
                             type="button"
                             onClick={handleExportCsv}
                             disabled={sortedExhibitors.length === 0}
-                            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50 hover:text-msme-blue transition disabled:opacity-40 cursor-pointer"
+                            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50 hover:text-msme-blue transition disabled:opacity-40"
                             title="Export filtered list to CSV"
                         >
                             <Download size={14} /> Export CSV ({sortedExhibitors.length})
                         </button>
 
-                        <RefreshListButton
-                            onRefresh={() => refetch()}
-                            loading={isFetching}
-                            label="Refresh"
-                            title="Fetch latest exhibitors from database"
-                        />
+                        <button
+                            type="button"
+                            onClick={() => void refetch()}
+                            disabled={isFetching}
+                            className="rounded-xl border border-slate-200 bg-white p-2 text-slate-600 hover:bg-slate-50 shadow-xs transition"
+                            title="Refresh exhibitor list"
+                        >
+                            <RefreshCw size={16} className={isFetching ? 'animate-spin' : ''} />
+                        </button>
                     </div>
                 </div>
 
@@ -589,8 +609,8 @@ export function AdminExhibitorListPage() {
                                 setPage(1);
                             }}
                             className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition ${lubFilter === 'ALL'
-                                    ? 'bg-white text-slate-900 shadow-xs'
-                                    : 'text-slate-600 hover:text-slate-900'
+                                ? 'bg-white text-slate-900 shadow-xs'
+                                : 'text-slate-600 hover:text-slate-900'
                                 }`}
                         >
                             All LUB
@@ -602,8 +622,8 @@ export function AdminExhibitorListPage() {
                                 setPage(1);
                             }}
                             className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition ${lubFilter === 'MEMBER'
-                                    ? 'bg-amber-600 text-white shadow-xs'
-                                    : 'text-amber-800 hover:bg-amber-100/50'
+                                ? 'bg-amber-600 text-white shadow-xs'
+                                : 'text-amber-800 hover:bg-amber-100/50'
                                 }`}
                         >
                             LUB Members ({metrics.lubCount})
@@ -615,54 +635,11 @@ export function AdminExhibitorListPage() {
                                 setPage(1);
                             }}
                             className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition ${lubFilter === 'NON_MEMBER'
-                                    ? 'bg-slate-700 text-white shadow-xs'
-                                    : 'text-slate-600 hover:bg-slate-200'
+                                ? 'bg-slate-700 text-white shadow-xs'
+                                : 'text-slate-600 hover:bg-slate-200'
                                 }`}
                         >
                             Non-Members
-                        </button>
-                    </div>
-
-                    {/* Booking Filter Pills */}
-                    <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-xl">
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setBookingFilter('ALL');
-                                setPage(1);
-                            }}
-                            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition ${bookingFilter === 'ALL'
-                                    ? 'bg-white text-slate-900 shadow-xs'
-                                    : 'text-slate-600 hover:text-slate-900'
-                                }`}
-                        >
-                            All Bookings
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setBookingFilter('BOOKED');
-                                setPage(1);
-                            }}
-                            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition ${bookingFilter === 'BOOKED'
-                                    ? 'bg-emerald-600 text-white shadow-xs'
-                                    : 'text-emerald-800 hover:bg-emerald-100/50'
-                                }`}
-                        >
-                            Booked ({metrics.bookedCount})
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setBookingFilter('UNBOOKED');
-                                setPage(1);
-                            }}
-                            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition ${bookingFilter === 'UNBOOKED'
-                                    ? 'bg-slate-700 text-white shadow-xs'
-                                    : 'text-slate-600 hover:bg-slate-200'
-                                }`}
-                        >
-                            No Booking
                         </button>
                     </div>
 
@@ -683,14 +660,14 @@ export function AdminExhibitorListPage() {
             {loading ? (
                 <div className="card p-12 text-center text-slate-500">
                     <RefreshCw size={28} className="mx-auto animate-spin text-msme-blue" />
-                    <p className="mt-3 text-sm font-medium">Loading exhibitor directory...</p>
+                    <p className="mt-3 text-sm font-medium">Loading paid exhibitor directory...</p>
                 </div>
-            ) : exhibitors.length === 0 ? (
+            ) : allocatedExhibitors.length === 0 ? (
                 <div className="card p-12 text-center">
-                    <Building2 size={44} className="mx-auto text-slate-300" />
-                    <p className="mt-3 text-base font-bold text-slate-800">No exhibitors registered yet</p>
+                    <Store size={44} className="mx-auto text-slate-300" />
+                    <p className="mt-3 text-base font-bold text-slate-800">No paid exhibitors found</p>
                     <p className="mt-1 text-xs text-slate-500 max-w-sm mx-auto">
-                        When exhibitors register for the expo or book stalls, their complete profile and company details will appear here.
+                        When exhibitors complete their payments and are allocated stalls, their complete profile and stall details will appear here.
                     </p>
                 </div>
             ) : filteredExhibitors.length === 0 ? (
@@ -1074,8 +1051,8 @@ export function AdminExhibitorListPage() {
                                     type="button"
                                     onClick={() => setPage(p)}
                                     className={`rounded-lg px-3 py-1 text-xs sm:text-sm font-semibold transition ${p === safePage
-                                            ? 'bg-msme-blue text-white'
-                                            : 'border border-slate-200 text-slate-600 hover:border-msme-blue hover:text-msme-blue'
+                                        ? 'bg-msme-blue text-white'
+                                        : 'border border-slate-200 text-slate-600 hover:border-msme-blue hover:text-msme-blue'
                                         }`}
                                 >
                                     {p}
@@ -1112,8 +1089,9 @@ export function AdminExhibitorListPage() {
 
             {/* VIEW DETAILS MODAL (Read-Only) */}
             {selectedExhibitor && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4 overflow-y-auto">
-                    <div className="w-full max-w-4xl rounded-3xl bg-white shadow-2xl border border-slate-200 my-8 overflow-hidden animate-in zoom-in-95 duration-200">
+                <ModalPortal>
+                    <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4 overflow-y-auto">
+                        <div className="w-full max-w-4xl rounded-3xl bg-white shadow-2xl border border-slate-200 my-8 overflow-hidden animate-in zoom-in-95 duration-200">
                         {/* Modal Header */}
                         <div className="bg-gradient-to-r from-msme-blue via-blue-900 to-indigo-950 p-6 text-white relative">
                             <button
@@ -1245,7 +1223,7 @@ export function AdminExhibitorListPage() {
                                     <div className="rounded-xl bg-slate-50 p-3 border border-slate-200 space-y-1">
                                         <span className="text-[10px] font-bold uppercase text-slate-500">Product Keywords / Tags</span>
                                         <div className="flex flex-wrap gap-1 mt-1">
-                                            {selectedExhibitor.productKeywords.split(',').map((kw, i) => (
+                                            {selectedExhibitor.productKeywords.split(',').map((kw: string, i: number) => (
                                                 <span key={i} className="rounded-md bg-blue-100/70 text-msme-blue px-2 py-0.5 text-[11px] font-semibold">
                                                     {kw.trim()}
                                                 </span>
@@ -1477,10 +1455,10 @@ export function AdminExhibitorListPage() {
                                                 <span className="text-[10px] font-bold uppercase text-slate-500">Payment Status</span>
                                                 <p className="mt-0.5">
                                                     <span className={`inline-block rounded-md px-2 py-0.5 text-xs font-bold ${selectedExhibitor.paymentStatus === 'Fully Paid' || selectedExhibitor.paymentStatus === 'Paid'
-                                                            ? 'bg-emerald-100 text-emerald-800'
-                                                            : selectedExhibitor.paymentStatus === 'Partially Paid'
-                                                                ? 'bg-amber-100 text-amber-800'
-                                                                : 'bg-rose-100 text-rose-800'
+                                                        ? 'bg-emerald-100 text-emerald-800'
+                                                        : selectedExhibitor.paymentStatus === 'Partially Paid'
+                                                            ? 'bg-amber-100 text-amber-800'
+                                                            : 'bg-rose-100 text-rose-800'
                                                         }`}>
                                                         {selectedExhibitor.paymentStatus || 'Unpaid'}
                                                     </span>
@@ -1511,6 +1489,7 @@ export function AdminExhibitorListPage() {
                         </div>
                     </div>
                 </div>
+                </ModalPortal>
             )}
         </div>
     );

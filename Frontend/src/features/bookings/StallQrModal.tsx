@@ -25,7 +25,7 @@ export function StallQrModal({ booking, onClose }: Props) {
   const cardRef = useRef<HTMLDivElement>(null);
 
   const profileUrl = `${PUBLIC_BASE_URL}/${encodeURIComponent(booking.bookingRegistrationNumber)}`;
-  const label = booking.fasciaName || booking.companyName || booking.bookingRegistrationNumber;
+  const label = booking.companyName || booking.fasciaName || booking.bookingRegistrationNumber;
 
   const handleDownload = async () => {
     if (!cardRef.current) return;
@@ -118,6 +118,12 @@ export function StallQrModal({ booking, onClose }: Props) {
               {label}
             </h3>
 
+            {booking.fasciaName && booking.fasciaName.toLowerCase() !== (booking.companyName || '').toLowerCase() && (
+              <p className="m-0 mt-1 text-xs text-blue-200 font-medium">
+                Brand: {booking.fasciaName}
+              </p>
+            )}
+
             <p className="m-0 mt-1.5 text-sm text-blue-100 font-medium">
               {booking.stallNumber ? `Stall No. ${booking.stallNumber}` : 'Scan to view stall profile'}
             </p>
@@ -137,10 +143,20 @@ export function StallQrModal({ booking, onClose }: Props) {
               {booking.bookingRegistrationNumber}
             </p>
           </div>
+
+          {/* Bottom Card Footer Banner */}
+          <div className="border-t border-slate-100 bg-slate-50 px-5 py-3 text-center">
+            <p className="m-0 text-xs font-bold text-[#0B3B75] leading-tight">
+              Scan QR code to view stall profile &amp; connect
+            </p>
+            <p className="m-0 mt-1 text-[10px] font-medium text-slate-500">
+              MSME Sangamam Connect • Place at stall front for visitors
+            </p>
+          </div>
         </div>
 
         {/* Action Controls */}
-        <div className="px-6 pb-6 pt-2 bg-white">
+        <div className="px-6 pb-6 pt-3 bg-white">
           <p className="m-0 text-center text-sm leading-relaxed text-gray-600">
             Place this at the front of the stall. Visitors scan it to view your
             company profile and tap "I'm Interested".

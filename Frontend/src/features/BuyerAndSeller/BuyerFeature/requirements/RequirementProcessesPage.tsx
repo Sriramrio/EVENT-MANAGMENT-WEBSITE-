@@ -5,6 +5,7 @@ import { toast } from "react-hot-toast";
 import { RequirementStepper } from "./wizard/RequirementStepper";
 import { useRequirementWizard, ProcessItem, TechnicalAttributeItem } from "./wizard/requirementWizardStore";
 import { useSaveDraft } from "../../../../services/buyer/hooks";
+import { ModalPortal } from "../../../../shared/components/ModalPortal";
 
 export default function RequirementProcessesPage() {
   const nav = useNavigate();
@@ -384,199 +385,205 @@ export default function RequirementProcessesPage() {
 
       {/* Add Process Modal */}
       {showAddProcessModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl animate-in fade-in">
-            <h3 className="text-base font-extrabold text-slate-900">Add Process</h3>
-            <form onSubmit={handleAddProcess} className="mt-4 space-y-4">
-              <div>
-                <label className="mb-1 block text-xs font-bold text-slate-700">Process Name *</label>
-                <input
-                  type="text"
-                  required
-                  value={newProcessName}
-                  onChange={(e) => setNewProcessName(e.target.value)}
-                  placeholder="e.g. Wire EDM / Surface Coating"
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium text-slate-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
+        <ModalPortal>
+          <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+            <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+              <h3 className="text-base font-extrabold text-slate-900">Add Process</h3>
+              <form onSubmit={handleAddProcess} className="mt-4 space-y-4">
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-700">Mandatory</label>
-                  <select
-                    value={newProcessMandatory}
-                    onChange={(e) => setNewProcessMandatory(e.target.value as "Yes" | "No")}
-                    className="w-full rounded-lg border border-slate-300 px-2.5 py-2 text-xs font-medium text-slate-800"
-                  >
-                    <option value="Yes">Yes</option>
-                    <option value="No">No</option>
-                  </select>
+                  <label className="mb-1 block text-xs font-bold text-slate-700">Process Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={newProcessName}
+                    onChange={(e) => setNewProcessName(e.target.value)}
+                    placeholder="e.g. Wire EDM / Surface Coating"
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium text-slate-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="mb-1 block text-xs font-bold text-slate-700">Mandatory</label>
+                    <select
+                      value={newProcessMandatory}
+                      onChange={(e) => setNewProcessMandatory(e.target.value as "Yes" | "No")}
+                      className="w-full rounded-lg border border-slate-300 px-2.5 py-2 text-xs font-medium text-slate-800"
+                    >
+                      <option value="Yes">Yes</option>
+                      <option value="No">No</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-bold text-slate-700">Preference</label>
+                    <select
+                      value={newProcessPreference}
+                      onChange={(e) => setNewProcessPreference(e.target.value as "—" | "Preferred" | "Optional")}
+                      className="w-full rounded-lg border border-slate-300 px-2.5 py-2 text-xs font-medium text-slate-800"
+                    >
+                      <option value="—">—</option>
+                      <option value="Preferred">Preferred</option>
+                      <option value="Optional">Optional</option>
+                    </select>
+                  </div>
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-700">Preference</label>
-                  <select
-                    value={newProcessPreference}
-                    onChange={(e) => setNewProcessPreference(e.target.value as "—" | "Preferred" | "Optional")}
-                    className="w-full rounded-lg border border-slate-300 px-2.5 py-2 text-xs font-medium text-slate-800"
-                  >
-                    <option value="—">—</option>
-                    <option value="Preferred">Preferred</option>
-                    <option value="Optional">Optional</option>
-                  </select>
+                  <label className="mb-1 block text-xs font-bold text-slate-700">Notes (Optional)</label>
+                  <input
+                    type="text"
+                    value={newProcessNotes}
+                    onChange={(e) => setNewProcessNotes(e.target.value)}
+                    placeholder="e.g. Tolerance ±0.01mm"
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium text-slate-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  />
                 </div>
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-bold text-slate-700">Notes (Optional)</label>
-                <input
-                  type="text"
-                  value={newProcessNotes}
-                  onChange={(e) => setNewProcessNotes(e.target.value)}
-                  placeholder="e.g. Tolerance ±0.01mm"
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium text-slate-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
-              <div className="flex justify-end gap-2 pt-3">
-                <button
-                  type="button"
-                  onClick={() => setShowAddProcessModal(false)}
-                  className="rounded-lg border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="rounded-lg bg-blue-600 px-5 py-2 text-xs font-bold text-white hover:bg-blue-700"
-                >
-                  Add Process
-                </button>
-              </div>
-            </form>
+                <div className="flex justify-end gap-2 pt-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddProcessModal(false)}
+                    className="rounded-lg border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="rounded-lg bg-blue-600 px-5 py-2 text-xs font-bold text-white hover:bg-blue-700"
+                  >
+                    Add Process
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
-        </div>
+        </ModalPortal>
       )}
 
       {/* Add Attribute Modal */}
       {showAddAttrModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl animate-in fade-in">
-            <h3 className="text-base font-extrabold text-slate-900">Add Technical Attribute</h3>
-            <form onSubmit={handleAddAttribute} className="mt-4 space-y-4">
-              <div>
-                <label className="mb-1 block text-xs font-bold text-slate-700">Attribute Name *</label>
-                <input
-                  type="text"
-                  required
-                  value={newAttrName}
-                  onChange={(e) => setNewAttrName(e.target.value)}
-                  placeholder="e.g. Maximum Workpiece Weight"
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium text-slate-800 outline-none focus:border-blue-500"
-                />
-              </div>
-              <div className="grid grid-cols-3 gap-2">
+        <ModalPortal>
+          <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+            <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+              <h3 className="text-base font-extrabold text-slate-900">Add Technical Attribute</h3>
+              <form onSubmit={handleAddAttribute} className="mt-4 space-y-4">
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-700">Operator</label>
+                  <label className="mb-1 block text-xs font-bold text-slate-700">Attribute Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={newAttrName}
+                    onChange={(e) => setNewAttrName(e.target.value)}
+                    placeholder="e.g. Maximum Workpiece Weight"
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium text-slate-800 outline-none focus:border-blue-500"
+                  />
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <label className="mb-1 block text-xs font-bold text-slate-700">Operator</label>
+                    <select
+                      value={newAttrOperator}
+                      onChange={(e) => setNewAttrOperator(e.target.value as any)}
+                      className="w-full rounded-lg border border-slate-300 px-2 py-2 text-xs font-medium text-slate-800"
+                    >
+                      <option value="=">=</option>
+                      <option value=">=">&gt;=</option>
+                      <option value="<=">&lt;=</option>
+                      <option value=">">&gt;</option>
+                      <option value="Between">Between</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-bold text-slate-700">Value</label>
+                    <input
+                      type="text"
+                      value={newAttrValue}
+                      onChange={(e) => setNewAttrValue(e.target.value)}
+                      placeholder="e.g. 1500"
+                      className="w-full rounded-lg border border-slate-300 px-2 py-2 text-xs font-medium text-slate-800"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-bold text-slate-700">Unit</label>
+                    <input
+                      type="text"
+                      value={newAttrUnit}
+                      onChange={(e) => setNewAttrUnit(e.target.value)}
+                      placeholder="e.g. kg / mm"
+                      className="w-full rounded-lg border border-slate-300 px-2 py-2 text-xs font-medium text-slate-800"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-bold text-slate-700">Mandatory</label>
                   <select
-                    value={newAttrOperator}
-                    onChange={(e) => setNewAttrOperator(e.target.value as any)}
-                    className="w-full rounded-lg border border-slate-300 px-2 py-2 text-xs font-medium text-slate-800"
+                    value={newAttrMandatory}
+                    onChange={(e) => setNewAttrMandatory(e.target.value as any)}
+                    className="w-full rounded-lg border border-slate-300 px-2.5 py-2 text-xs font-medium text-slate-800"
                   >
-                    <option value="=">=</option>
-                    <option value=">=">&gt;=</option>
-                    <option value="<=">&lt;=</option>
-                    <option value=">">&gt;</option>
-                    <option value="Between">Between</option>
+                    <option value="Yes">Yes</option>
+                    <option value="Preferred">Preferred</option>
+                    <option value="No">No</option>
                   </select>
                 </div>
-                <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-700">Value</label>
-                  <input
-                    type="text"
-                    value={newAttrValue}
-                    onChange={(e) => setNewAttrValue(e.target.value)}
-                    placeholder="e.g. 1500"
-                    className="w-full rounded-lg border border-slate-300 px-2 py-2 text-xs font-medium text-slate-800"
-                  />
+                <div className="flex justify-end gap-2 pt-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddAttrModal(false)}
+                    className="rounded-lg border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="rounded-lg bg-blue-600 px-5 py-2 text-xs font-bold text-white hover:bg-blue-700"
+                  >
+                    Add Attribute
+                  </button>
                 </div>
-                <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-700">Unit</label>
-                  <input
-                    type="text"
-                    value={newAttrUnit}
-                    onChange={(e) => setNewAttrUnit(e.target.value)}
-                    placeholder="e.g. kg / mm"
-                    className="w-full rounded-lg border border-slate-300 px-2 py-2 text-xs font-medium text-slate-800"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-bold text-slate-700">Mandatory</label>
-                <select
-                  value={newAttrMandatory}
-                  onChange={(e) => setNewAttrMandatory(e.target.value as any)}
-                  className="w-full rounded-lg border border-slate-300 px-2.5 py-2 text-xs font-medium text-slate-800"
-                >
-                  <option value="Yes">Yes</option>
-                  <option value="Preferred">Preferred</option>
-                  <option value="No">No</option>
-                </select>
-              </div>
-              <div className="flex justify-end gap-2 pt-3">
-                <button
-                  type="button"
-                  onClick={() => setShowAddAttrModal(false)}
-                  className="rounded-lg border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="rounded-lg bg-blue-600 px-5 py-2 text-xs font-bold text-white hover:bg-blue-700"
-                >
-                  Add Attribute
-                </button>
-              </div>
-            </form>
+              </form>
+            </div>
           </div>
-        </div>
+        </ModalPortal>
       )}
 
       {/* Edit Notes Modal */}
       {editingNoteItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl animate-in fade-in">
-            <h3 className="text-base font-extrabold text-slate-900">
-              Notes for {editingNoteItem.name}
-            </h3>
-            <textarea
-              rows={3}
-              value={editingNoteItem.notes}
-              onChange={(e) =>
-                setEditingNoteItem({ ...editingNoteItem, notes: e.target.value })
-              }
-              placeholder="Enter special notes, tolerance requirements or guidelines..."
-              className="mt-3 w-full rounded-lg border border-slate-300 p-3 text-xs font-medium text-slate-800 outline-none focus:border-blue-500"
-            />
-            <div className="mt-4 flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setEditingNoteItem(null)}
-                className="rounded-lg border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50"
-              >
-                Close
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  wizard.updateProcess(editingNoteItem.id, { notes: editingNoteItem.notes });
-                  setEditingNoteItem(null);
-                }}
-                className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-5 py-2 text-xs font-bold text-white hover:bg-blue-700"
-              >
-                <Check className="h-3.5 w-3.5" />
-                Save Note
-              </button>
+        <ModalPortal>
+          <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+            <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+              <h3 className="text-base font-extrabold text-slate-900">
+                Notes for {editingNoteItem.name}
+              </h3>
+              <textarea
+                rows={3}
+                value={editingNoteItem.notes}
+                onChange={(e) =>
+                  setEditingNoteItem({ ...editingNoteItem, notes: e.target.value })
+                }
+                placeholder="Enter special notes, tolerance requirements or guidelines..."
+                className="mt-3 w-full rounded-lg border border-slate-300 p-3 text-xs font-medium text-slate-800 outline-none focus:border-blue-500"
+              />
+              <div className="mt-4 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingNoteItem(null)}
+                  className="rounded-lg border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50"
+                >
+                  Close
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    wizard.updateProcess(editingNoteItem.id, { notes: editingNoteItem.notes });
+                    setEditingNoteItem(null);
+                  }}
+                  className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-5 py-2 text-xs font-bold text-white hover:bg-blue-700"
+                >
+                  <Check className="h-3.5 w-3.5" />
+                  Save Note
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        </ModalPortal>
       )}
     </div>
   );
