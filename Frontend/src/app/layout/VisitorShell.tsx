@@ -98,7 +98,7 @@ export function VisitorShell() {
         `}
       >
         <div className="flex h-full flex-col">
-          <nav className="flex-1 space-y-1 px-3 py-5">
+          <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-5">
             <p className="mb-3 px-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Visitor Menu</p>
             {menuItems.map((item) => {
               const Icon = item.icon;
@@ -124,7 +124,7 @@ export function VisitorShell() {
             })}
           </nav>
 
-          <div className="p-3">
+          <div className="shrink-0 p-3">
             <SidebarDigitalPartnerFooter />
           </div>
         </div>

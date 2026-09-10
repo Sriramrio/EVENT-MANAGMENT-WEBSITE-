@@ -13,9 +13,10 @@ import {
   ClipboardList,
   IdCard,
   Mail,
+  MailCheck,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { exhibitorApiClient, getExhibitorProfile, setExhibitorSession } from '../../data/api/exhibitorApiClient';
+import { exhibitorApiClient, getExhibitorProfile, getExhibitorToken, setExhibitorSession } from '../../data/api/exhibitorApiClient';
 import { SidebarDigitalPartnerFooter } from '../../components/BaseComponents/SidebarDigitalPartnerFooter';
 
 interface ExhibitorMe {
@@ -35,7 +36,17 @@ export function ExhibitorShell() {
   useEffect(() => {
     exhibitorApiClient
       .get<ExhibitorMe>('/exhibitor/me')
-      .then((data) => setMe(data))
+      .then((data) => {
+        setMe(data);
+        if (data && data.registrationNumber) {
+          const token = getExhibitorToken();
+          setExhibitorSession(token, {
+            companyName: data.companyName,
+            registrationNumber: data.registrationNumber,
+            stallNumber: data.stallNumber
+          });
+        }
+      })
       .catch(() => { });
   }, []);
 
@@ -46,6 +57,7 @@ export function ExhibitorShell() {
     { label: 'Dashboard', path: '/exhibitorShell/Dashboard', icon: LayoutDashboard },
     { label: 'E-Card Download', path: '/exhibitorShell/ECard', icon: IdCard },
     { label: 'Send Email', path: '/exhibitorShell/SendEmail', icon: Mail },
+    { label: 'Visitor Email Logs', path: '/exhibitorShell/EmailLogs', icon: MailCheck },
     { label: 'Scan Visitor QR', path: '/exhibitorShell/Scanner', icon: QrCode },
     { label: 'Visitor Connections', path: '/exhibitorShell/Connections', icon: Users },
     { label: 'Additional Requirements', path: '/exhibitorShell/AdditionalRequirements', icon: PackagePlus },
@@ -110,7 +122,7 @@ export function ExhibitorShell() {
         `}
       >
         <div className="flex h-full flex-col">
-          <nav className="flex-1 space-y-1 px-3 py-5">
+          <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-5">
             <p className="mb-3 px-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Exhibitor Menu</p>
             {menuItems.map((item) => {
               const Icon = item.icon;
@@ -136,7 +148,7 @@ export function ExhibitorShell() {
             })}
           </nav>
 
-          <div className="p-3">
+          <div className="shrink-0 p-3">
             <SidebarDigitalPartnerFooter />
           </div>
         </div>

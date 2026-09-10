@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useSubmitQuotation } from '../../../../services/seller/hooks';
 import { useSellerSession } from '../../../../services/seller/hooks';
 import { toast } from 'react-hot-toast';
+import { ModalPortal } from '../../../../shared/components/ModalPortal';
 
 export function SellerSubmitQuotationModal({
   rfqId,
@@ -60,15 +61,16 @@ export function SellerSubmitQuotationModal({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm"
-      onMouseDown={event => {
-        if (event.target === event.currentTarget && !submitQuotation.isPending) {
-          onClose();
-        }
-      }}
-    >
-      <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl">
+    <ModalPortal>
+      <div
+        className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm animate-in fade-in duration-200"
+        onMouseDown={event => {
+          if (event.target === event.currentTarget && !submitQuotation.isPending) {
+            onClose();
+          }
+        }}
+      >
+        <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl">
         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
           <h2 className="text-xl font-bold text-slate-900">Submit Quotation</h2>
           <button
@@ -131,5 +133,6 @@ export function SellerSubmitQuotationModal({
         </form>
       </div>
     </div>
+    </ModalPortal>
   );
 }

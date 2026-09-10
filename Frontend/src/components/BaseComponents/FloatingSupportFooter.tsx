@@ -24,26 +24,26 @@ export const FloatingSupportFooter: React.FC<FloatingSupportFooterProps> = ({
   return (
     <aside
       aria-label="Digital Support by Atribs"
-      className={`fixed bottom-0 left-0 right-0 z-50 w-full select-none border-t border-blue-800/50 bg-[#061e3d]/95 px-3 py-2 text-white shadow-2xl backdrop-blur-md transition-all duration-300 sm:bottom-4 ${desktopPositionClasses} sm:w-auto sm:rounded-2xl sm:border sm:border-blue-400/40 sm:bg-[#061e3d] sm:p-1.5 sm:shadow-2xl sm:shadow-[#061e3d]/60 md:bottom-5 print:hidden`}
+      className={`fixed bottom-2.5 left-2 right-2 sm:left-auto sm:right-4 md:right-6 sm:bottom-4 md:bottom-5 z-50 mx-auto max-w-fit sm:max-w-none select-none rounded-2xl border border-blue-400/40 bg-[#061e3d]/95 p-1 sm:p-1.5 text-white shadow-2xl shadow-[#061e3d]/60 backdrop-blur-md transition-all duration-300 ${desktopPositionClasses} print:hidden`}
     >
-      <div className="mx-auto flex max-w-lg items-center justify-between gap-2 sm:max-w-none sm:justify-start">
+      <div className="flex items-center justify-center gap-1.5 sm:gap-2">
         {showHelpline && (
           <>
             <a
               href={`tel:${helplineNumber.replace(/\s+/g, '')}`}
-              className="group flex items-center gap-1.5 rounded-xl bg-white/10 px-3 py-1.5 text-xs font-bold text-white shadow-xs transition-all hover:bg-white hover:text-[#061e3d] active:scale-95 sm:px-3 sm:py-2"
+              className="group flex items-center gap-1.5 rounded-xl bg-white/10 px-2.5 py-1.5 text-xs font-bold text-white shadow-xs transition-all hover:bg-white hover:text-[#061e3d] active:scale-95 sm:px-3 sm:py-2"
               title={`Call Digital Helpline: ${helplineName} (${helplineNumber})`}
             >
-              <span className="relative flex h-2 w-2">
+              <span className="relative flex h-2 w-2 shrink-0">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-cyan-300 opacity-75"></span>
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-cyan-400 group-hover:bg-[#061e3d]"></span>
               </span>
-              <Phone className="h-3.5 w-3.5 transition-transform group-hover:rotate-12" />
-              <span className="hidden xs:inline sm:inline">Support:</span>
-              <span>{helplineNumber}</span>
+              <Phone className="h-3.5 w-3.5 shrink-0 transition-transform group-hover:rotate-12" />
+              <span className="hidden md:inline text-blue-200 font-normal">Support:</span>
+              <span className="whitespace-nowrap font-mono text-[11px] sm:text-xs font-bold tracking-tight">{helplineNumber}</span>
             </a>
 
-            <div className="h-6 w-px bg-white/20" />
+            <div className="h-5 sm:h-6 w-px bg-white/20 shrink-0" />
           </>
         )}
 
@@ -52,27 +52,27 @@ export const FloatingSupportFooter: React.FC<FloatingSupportFooterProps> = ({
           href={partnerUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="group flex items-center gap-2 rounded-xl px-2.5 py-1.5 transition-all hover:bg-white/10 sm:gap-2.5"
+          className="group flex items-center gap-1.5 rounded-xl px-2 py-1 transition-all hover:bg-white/10 sm:gap-2 sm:px-2.5 sm:py-1.5"
           title="Digital Support by Atribs - Cloud & Enterprise Solutions"
         >
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-500/20 text-cyan-300 shadow-xs transition-colors group-hover:bg-white group-hover:text-[#061e3d] sm:h-8 sm:w-8">
-            <Globe className="h-4 w-4 transition-transform group-hover:rotate-45" />
+          <div className="flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-lg bg-blue-500/20 text-cyan-300 shadow-xs transition-colors group-hover:bg-white group-hover:text-[#061e3d]">
+            <Globe className="h-3.5 w-3.5 sm:h-4 sm:w-4 transition-transform group-hover:rotate-45" />
           </div>
 
           <div className="flex flex-col text-left">
             <div className="flex items-center gap-1">
-              <span className="text-[9px] font-extrabold uppercase tracking-wider text-cyan-300">
-                Digital Support by
+              <span className="text-[8px] sm:text-[9px] font-extrabold uppercase tracking-wider text-cyan-300 leading-none">
+                Support by
               </span>
-              <Sparkles className="h-2.5 w-2.5 text-amber-300" />
+              <Sparkles className="h-2 w-2 sm:h-2.5 sm:w-2.5 text-amber-300 shrink-0" />
             </div>
 
-            <span className="flex items-center gap-1 text-xs font-black tracking-tight text-white transition-colors group-hover:text-cyan-200">
+            <span className="flex items-center gap-1 text-[11px] sm:text-xs font-black tracking-tight text-white transition-colors group-hover:text-cyan-200 leading-tight mt-0.5">
               Atribs
-              <span className="hidden md:inline font-normal text-blue-200 text-[10px]">
+              <span className="hidden lg:inline font-normal text-blue-200 text-[10px]">
                 (ATRIBS GLOBAL)
               </span>
-              <ExternalLink className="h-3 w-3 text-blue-200 transition-transform group-hover:translate-x-0.5 group-hover:text-white" />
+              <ExternalLink className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-blue-200 transition-transform group-hover:translate-x-0.5 group-hover:text-white shrink-0" />
             </span>
           </div>
         </a>
@@ -80,3 +80,4 @@ export const FloatingSupportFooter: React.FC<FloatingSupportFooterProps> = ({
     </aside>
   );
 };
+

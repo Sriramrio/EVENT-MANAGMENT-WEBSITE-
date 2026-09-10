@@ -8,7 +8,16 @@ export interface LoginInput {
 export interface BookingRepository {
   list(status?: BookingStatus | 'All'): Promise<StallBooking[]>;
   get(id: string): Promise<StallBooking | undefined>;
-blockStall(bookingId: string, stallId: string, actorUserId: string, targetSponsorTotal?: number, isGstApplicable?: boolean, isTdsDeductable?: boolean): Promise<void>;}
+  blockStall(
+    bookingId: string,
+    stallId: string,
+    actorUserId: string,
+    targetSponsorTotal?: number,
+    isGstApplicable?: boolean,
+    isTdsDeductable?: boolean,
+    tdsPercentage?: number
+  ): Promise<void>;
+}
 
 export interface StallRepository {
   list(): Promise<Stall[]>;
@@ -20,25 +29,31 @@ export interface PaymentRepository {
 
   getById?(paymentId: string): Promise<Payment>;
 
- submitAndVerify(
-  bookingId: string,
-  payload: {
-    actorUserId: string;
-    paymentReferenceNumber: string;
-    paymentDate: string;
-    payerName: string;
-    payerBank: string;
-    amountPaid: number;
-    remarks: string;
-    overrideExpiredBlock: boolean;
-  }
-): Promise<void>;
+  submitAndVerify(
+    bookingId: string,
+    payload: {
+      actorUserId: string;
+      paymentReferenceNumber: string;
+      paymentDate: string;
+      payerName: string;
+      payerBank: string;
+      amountPaid: number;
+      remarks: string;
+      overrideExpiredBlock: boolean;
+      isTdsDeductable?: boolean;
+      tdsPercentage?: number;
+      TargetSponsorTotal?: number | null;
+      isGstApplicable?: boolean;
+      gstType?: string;
+      gstAmount?: string;
+    }
+  ): Promise<void>;
 }
 
 export interface InvoiceRepository {
   list(): Promise<ProformaInvoice[]>;
   generate(bookingId: string, actorUserId: string): Promise<ProformaInvoice>;
-  markSent(invoiceId: string, actorUserId: string): Promise<void>;
+  markSent(invoiceId: string, actorUserId: string): Promise<any>;
   sendProforma(bookingId: string, actorUserId: string): Promise<void>;
 }
 

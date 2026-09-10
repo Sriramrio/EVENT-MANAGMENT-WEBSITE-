@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Card } from '../../../components/ui/Card';
 import { LoadingState, ErrorState } from '../../../components/ui/PageStates';
+import { ModalPortal } from '../../../shared/components/ModalPortal';
 import {
   ClipboardList,
   Search,
@@ -460,8 +461,9 @@ export function AdminMarketplaceRequirementsPage({ kind = 'BUYER' }: { kind?: 'B
 
       {/* Requirement Details Modal / Drawer */}
       {selectedItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200 p-6 space-y-6">
+        <ModalPortal>
+          <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200 p-6 space-y-6">
             {/* Modal Header */}
             <div className="flex items-start justify-between border-b border-slate-100 pb-4">
               <div>
@@ -640,6 +642,7 @@ export function AdminMarketplaceRequirementsPage({ kind = 'BUYER' }: { kind?: 'B
             </div>
           </div>
         </div>
+        </ModalPortal>
       )}
     </div>
   );

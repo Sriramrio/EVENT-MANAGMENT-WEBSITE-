@@ -216,12 +216,13 @@ public sealed class Stall : AuditableEntity
                 "Actor user ID is required.");
         }
 
-        if (CurrentStatus != StallStatus.Blocked &&
-            CurrentStatus != StallStatus.Reservation)
+               if (CurrentStatus != StallStatus.Blocked &&
+            CurrentStatus != StallStatus.Reservation &&
+            CurrentStatus != StallStatus.Frozen)
         {
             throw new DomainRuleException(
                 ErrorCodes.ValidationFailed,
-                $"Only a blocked or reserved stall can be released. Current status: {CurrentStatus}.");
+                $"Only a blocked, reserved, or frozen stall can be released. Current status: {CurrentStatus}.");
         }
 
         if (CurrentBookingId.HasValue &&

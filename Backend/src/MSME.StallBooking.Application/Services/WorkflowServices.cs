@@ -3,6 +3,7 @@ using MSME.StallBooking.Application.Abstractions;
 using MSME.StallBooking.Application.Contracts;
 using MSME.StallBooking.Application.Security;
 using MSME.StallBooking.Domain.Entities;
+using MSME.StallBooking.Domain.Enums;
 using MSME.StallBooking.SharedKernel.Errors;
 using static MSME.StallBooking.Domain.Entities.BillingProfile;
 
@@ -148,13 +149,6 @@ public sealed class PaymentWorkflowService
                 command.EventId,
                 tx);
 
-            if (payment.AmountPaid > command.ExpectedAmount)
-            {
-                throw new DomainRuleException(
-                    ErrorCodes.PaymentAmountMismatch,
-                    "Paid amount cannot exceed the expected amount.");
-            }
-
             bool isPartialPayment = payment.AmountPaid < command.ExpectedAmount;
             bool isFullSettlement = !isPartialPayment;
 
@@ -166,12 +160,15 @@ public sealed class PaymentWorkflowService
 
             if (isFullSettlement)
             {
-                allocation.Freeze(command.ActorUserId);
-                booking.ConfirmPaymentAndFreeze();
+                if (allocation.AllocationStatus != AllocationStatus.Frozen)
+                    allocation.Freeze(command.ActorUserId);
+                if (booking.BookingStatus != BookingStatus.Confirmed)
+                    booking.ConfirmPaymentAndFreeze();
             }
             else
             {
-                booking.MarkPaymentSubmitted();
+                if (booking.BookingStatus != BookingStatus.Confirmed)
+                    booking.MarkPaymentSubmitted();
             }
 
             await _uow.SaveChangesAsync(tx);
@@ -473,7 +470,7 @@ public sealed class VisitorWorkflowService
 
         byte[] qrCodeBytes = _qrCodeService.GenerateQrCode(verificationUrl);
         //string verificationUrl = $"https://msmesangamam.lubtn.com/visitorverification/{registrationNumber}";
-       // string qrImageInlineSrc = "cid:qr-code-inline";
+        // string qrImageInlineSrc = "cid:qr-code-inline";
 
         // 3. Email Composition
         //        string emailBody = $@"
@@ -704,57 +701,57 @@ CancellationToken ct = default)
         var finalSubject = notifEmail?.Subject ?? subject;
         var finalBody = notifEmail?.BodySnapshot ?? (string.IsNullOrWhiteSpace(messageBody) ? "" : messageBody);
 
-     //   // Build responsive HTML template matching your existing workflow email
-     //   string emailHtml = $@"
-     //<div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 16px; border: 1px solid #e0e0e0; border-radius: 8px;'>
-     //    <h2 style='color: #0d6efd;'>{subject}</h2>
-     //    <p>Dear <strong>{recipientName}</strong>,</p>
+        //   // Build responsive HTML template matching your existing workflow email
+        //   string emailHtml = $@"
+        //<div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 16px; border: 1px solid #e0e0e0; border-radius: 8px;'>
+        //    <h2 style='color: #0d6efd;'>{subject}</h2>
+        //    <p>Dear <strong>{recipientName}</strong>,</p>
 
-     //    <div style='background-color: #f8f9fa; padding: 12px 16px; border-radius: 6px; margin: 16px 0;'>
-     //        <p style='margin: 4px 0;'><strong>Visitor Reg. No:</strong> <span style='color: #0d6efd; font-size: 16px;'>{visitor.BookingRegistrationNumber}</span></p>
-     //        <p style='margin: 4px 0;'><strong>Company Name:</strong> {visitor.LegalName}</p>
-     //    </div>
+        //    <div style='background-color: #f8f9fa; padding: 12px 16px; border-radius: 6px; margin: 16px 0;'>
+        //        <p style='margin: 4px 0;'><strong>Visitor Reg. No:</strong> <span style='color: #0d6efd; font-size: 16px;'>{visitor.BookingRegistrationNumber}</span></p>
+        //        <p style='margin: 4px 0;'><strong>Company Name:</strong> {visitor.LegalName}</p>
+        //    </div>
 
-     //    {formattedCustomMessage}
+        //    {formattedCustomMessage}
 
-     //    <!-- CTA Button to Access Pass -->
-     //    <div style='text-align: center; margin: 28px 0;'>
-     //        <a href='{verificationUrl}' 
-     //           target='_blank' 
-     //           style='background-color: #0d6efd; color: #ffffff; padding: 12px 24px; font-weight: bold; font-size: 14px; text-decoration: none; border-radius: 8px; display: inline-block; box-shadow: 0 2px 4px rgba(0,0,0,0.1);'>
-     //            View & Download Digital Pass
-     //        </a>
-     //    </div>
+        //    <!-- CTA Button to Access Pass -->
+        //    <div style='text-align: center; margin: 28px 0;'>
+        //        <a href='{verificationUrl}' 
+        //           target='_blank' 
+        //           style='background-color: #0d6efd; color: #ffffff; padding: 12px 24px; font-weight: bold; font-size: 14px; text-decoration: none; border-radius: 8px; display: inline-block; box-shadow: 0 2px 4px rgba(0,0,0,0.1);'>
+        //            View & Download Digital Pass
+        //        </a>
+        //    </div>
 
-     //    <!-- Digital Support Team Info Block -->
-     //    <div style='margin-top:24px; padding:16px; background-color:#f5f7fa; border-left:4px solid #0d6efd; border-radius:4px;'>
-     //        <h3 style='margin:0 0 10px 0; color:#0d6efd;'>Digital Support Team</h3>
-     //        <p style='margin:0 0 12px 0; font-size: 13px;'>
-     //            For assistance regarding venue entry, gate verification, or pass access, please contact our Digital Support Team:
-     //        </p>
-     //        <table style='border-collapse:collapse; font-size: 13px;'>
-     //            <tr>
-     //                <td style='padding:5px 12px 5px 0; font-weight:bold;'>Sriram Hariharan</td>
-     //                <td style='padding:5px 0;'><a href='tel:+919840727309' style='color:#0d6efd; text-decoration:none;'>+91 98407 27309</a></td>
-     //            </tr>
-     //            <tr>
-     //                <td style='padding:5px 12px 5px 0; font-weight:bold;'>Arun Vignesh P.B.</td>
-     //                <td style='padding:5px 0;'><a href='tel:+917092482244' style='color:#0d6efd; text-decoration:none;'>+91 70924 82244</a></td>
-     //            </tr>
-     //        </table>
-     //        <p style='margin:12px 0 0 0; font-size: 12px; color: #555555;'>
-     //            Please mention your Registration Number <b>{visitor.BookingRegistrationNumber}</b> when reaching out.
-     //        </p>
-     //    </div>
+        //    <!-- Digital Support Team Info Block -->
+        //    <div style='margin-top:24px; padding:16px; background-color:#f5f7fa; border-left:4px solid #0d6efd; border-radius:4px;'>
+        //        <h3 style='margin:0 0 10px 0; color:#0d6efd;'>Digital Support Team</h3>
+        //        <p style='margin:0 0 12px 0; font-size: 13px;'>
+        //            For assistance regarding venue entry, gate verification, or pass access, please contact our Digital Support Team:
+        //        </p>
+        //        <table style='border-collapse:collapse; font-size: 13px;'>
+        //            <tr>
+        //                <td style='padding:5px 12px 5px 0; font-weight:bold;'>Sriram Hariharan</td>
+        //                <td style='padding:5px 0;'><a href='tel:+919840727309' style='color:#0d6efd; text-decoration:none;'>+91 98407 27309</a></td>
+        //            </tr>
+        //            <tr>
+        //                <td style='padding:5px 12px 5px 0; font-weight:bold;'>Arun Vignesh P.B.</td>
+        //                <td style='padding:5px 0;'><a href='tel:+917092482244' style='color:#0d6efd; text-decoration:none;'>+91 70924 82244</a></td>
+        //            </tr>
+        //        </table>
+        //        <p style='margin:12px 0 0 0; font-size: 12px; color: #555555;'>
+        //            Please mention your Registration Number <b>{visitor.BookingRegistrationNumber}</b> when reaching out.
+        //        </p>
+        //    </div>
 
-     //    <p style='margin-top:20px; font-size: 13px;'>
-     //        Regards,<br/>
-     //        <b>MSME Sangamam Connect - Tamil Nadu Organising Team</b>
-     //    </p>
-     //</div>";
+        //    <p style='margin-top:20px; font-size: 13px;'>
+        //        Regards,<br/>
+        //        <b>MSME Sangamam Connect - Tamil Nadu Organising Team</b>
+        //    </p>
+        //</div>";
 
-      
-          if (notifEmail != null)
+
+        if (notifEmail != null)
         {
             await _uow.EmailLogs.AddAsync(notifEmail, ct);
             await _uow.SaveChangesAsync(ct);

@@ -64,16 +64,18 @@ export function VisitorVerificationPage() {
         try {
             const element = passRef.current;
 
-            // Force scroll to top left before capturing to prevent header clipping
+            const images = Array.from(element.querySelectorAll('img'));
+            await Promise.all(
+                images.map(img => img.complete ? Promise.resolve() : new Promise(res => { img.onload = res; img.onerror = res; }))
+            );
+
             const canvas = await html2canvas(element, {
                 scale: 3,
                 useCORS: true,
                 logging: false,
                 backgroundColor: '#ffffff',
                 scrollX: 0,
-                scrollY: -window.scrollY, // Corrects scroll offset
-                windowWidth: 1200,
-                windowHeight: element.scrollHeight + 100,
+                scrollY: 0,
                 onclone: (clonedDoc) => {
                     const clonedElement = clonedDoc.querySelector('[data-pass-card="true"]') as HTMLElement;
                     if (clonedElement) {
@@ -83,6 +85,7 @@ export function VisitorVerificationPage() {
                         clonedElement.style.transform = 'none';
                         clonedElement.style.position = 'relative';
                         clonedElement.style.top = '0';
+                        clonedElement.style.overflow = 'visible';
                     }
                 }
             });

@@ -68,7 +68,6 @@ public sealed class StallAllocationController : ControllerBase
         return Accepted(new { message = "Stall blocked and payment request email queued." });
     }
     [HttpPost("stalls/{stallId:guid}/release-block")]
-    [Authorize]
     public async Task<IActionResult> ReleaseBlock(
     Guid eventId,
     Guid bookingId,
@@ -96,12 +95,13 @@ public sealed class StallAllocationController : ControllerBase
                 });
             }
 
-            if (booking.BookingStatus != BookingStatus.BlockedAwaitingPayment)
+                        if (booking.BookingStatus != BookingStatus.BlockedAwaitingPayment &&
+                booking.BookingStatus != BookingStatus.Confirmed)
             {
                 return BadRequest(new
                 {
                     message =
-                        $"Only BlockedAwaitingPayment booking can be released. " +
+                        $"Only BlockedAwaitingPayment or Confirmed booking can be released. " +
                         $"Current status is '{booking.BookingStatus}'."
                 });
             }
@@ -121,12 +121,13 @@ public sealed class StallAllocationController : ControllerBase
                 });
             }
 
-            if (stall.CurrentStatus != StallStatus.Blocked)
+                if (stall.CurrentStatus != StallStatus.Blocked &&
+                stall.CurrentStatus != StallStatus.Frozen)
             {
                 return BadRequest(new
                 {
                     message =
-                        $"Only a blocked stall can be released. " +
+                        $"Only a blocked or frozen stall can be released. " +
                         $"Current status is '{stall.CurrentStatus}'."
                 });
             }
@@ -148,18 +149,31 @@ public sealed class StallAllocationController : ControllerBase
                 .OrderByDescending(x => x.BlockedAt)
                 .FirstOrDefaultAsync(ct);
 
-            var releasedAt = DateTimeOffset.UtcNow;
+                       var releasedAt = DateTimeOffset.UtcNow;
             var reason = string.IsNullOrWhiteSpace(request.Reason)
                 ? "Blocked stall manually released."
                 : request.Reason.Trim();
 
+            // Capture BEFORE Release() flips it to Available.
+            var wasFrozen = stall.CurrentStatus == StallStatus.Frozen;
+
             // Changes stall to Available and clears CurrentBookingId.
             stall.Release(booking.Id, request.ActorUserId);
 
-            // Private setter: move booking back to Submitted.
+            // Frozen (paid/confirmed) booking -> Cancelled.
+            // Blocked (unpaid) booking -> back to Submitted.
             _db.Entry(booking)
                 .Property(x => x.BookingStatus)
-                .CurrentValue = BookingStatus.Submitted;
+                .CurrentValue = wasFrozen
+                    ? BookingStatus.Cancelled
+                    : BookingStatus.Submitted;
+
+            if (wasFrozen)
+            {
+                _db.Entry(booking)
+                    .Property(x => x.CancellationReason)
+                    .CurrentValue = reason;
+            }
 
             // Private setter: clear blocked/allocated stall.
             _db.Entry(booking)
@@ -170,9 +184,12 @@ public sealed class StallAllocationController : ControllerBase
             _db.Entry(booking)
                 .Property(x => x.BlockExpiresAt)
                 .CurrentValue = null;
-
-            if (allocation is not null)
+                       if (allocation is not null)
             {
+                _db.Entry(allocation)
+                    .Property(x => x.AllocationStatus)
+                    .CurrentValue = AllocationStatus.Released;
+
                 _db.Entry(allocation)
                     .Property(x => x.ReleasedAt)
                     .CurrentValue = releasedAt;
@@ -246,3 +263,4 @@ public sealed class StallAllocationController : ControllerBase
 public sealed record BlockStallRequest(Guid TenantId, Guid StallId, Guid ActorUserId);
 public sealed record VerifyPaymentRequest(Guid TenantId, Guid ActorUserId, decimal ExpectedAmount, bool OverrideExpiredBlock);
 public sealed record GenerateInvoiceRequest(Guid TenantId, Guid ActorUserId);
+

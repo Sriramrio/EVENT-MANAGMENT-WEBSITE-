@@ -60,7 +60,16 @@ export class DexieBookingRepository implements BookingRepository {
     return db.bookings.get(id);
   }
 
-async blockStall(bookingId: string, stallId: string, actorUserId: string, targetSponsorTotal?: number): Promise<void> {    await db.transaction('rw', db.bookings, db.stalls, db.stallAllocations, db.emailLogs, db.auditLogs, async () => {
+  async blockStall(
+    bookingId: string,
+    stallId: string,
+    actorUserId: string,
+    targetSponsorTotal?: number,
+    isGstApplicable?: boolean,
+    isTdsDeductable?: boolean,
+    tdsPercentage?: number
+  ): Promise<void> {
+    await db.transaction('rw', db.bookings, db.stalls, db.stallAllocations, db.emailLogs, db.auditLogs, async () => {
       const booking = await db.bookings.get(bookingId);
       const stall = await db.stalls.get(stallId);
       if (!booking) throw new Error('BOOKING_NOT_FOUND');
@@ -146,6 +155,12 @@ export class DexiePaymentRepository implements PaymentRepository {
       amountPaid: number;
       remarks: string;
       overrideExpiredBlock: boolean;
+      isTdsDeductable?: boolean;
+      tdsPercentage?: number;
+      TargetSponsorTotal?: number | null;
+      isGstApplicable?: boolean;
+      gstType?: string;
+      gstAmount?: string;
     }
   ): Promise<void> {
     await db.transaction('rw', db.bookings, db.stalls, db.stallAllocations, db.payments, db.auditLogs, async () => {
@@ -155,7 +170,7 @@ export class DexiePaymentRepository implements PaymentRepository {
         throw new Error('BOOKING_NOT_FOUND_OR_NO_STALL');
       }
 
-      if (!['BlockedAwaitingPayment', 'PaymentSubmitted'].includes(booking.bookingStatus)) {
+      if (!['BlockedAwaitingPayment', 'PaymentSubmitted', 'Confirmed'].includes(booking.bookingStatus)) {
         throw new Error('PAYMENT_NOT_ALLOWED');
       }
 
@@ -221,7 +236,7 @@ export class DexieInvoiceRepository implements InvoiceRepository {
   async list(): Promise<ProformaInvoice[]> {
     return db.proformaInvoices.toArray();
   }
-    async sendProforma(bookingId: string, actorUserId: string): Promise<void> {
+  async sendProforma(bookingId: string, actorUserId: string): Promise<void> {
     const booking = await db.bookings.get(bookingId);
     if (!booking) throw new Error('BOOKING_NOT_FOUND');
     if (!booking.allocatedStallId) throw new Error('VALIDATION_FAILED');
@@ -309,7 +324,7 @@ export class DexieInvoiceRepository implements InvoiceRepository {
         tenantId: booking.tenantId,
         eventId: booking.eventId,
         bookingId,
-        invoiceNumber: `PI-${new Date().toISOString().slice(0,10).replaceAll('-', '')}-${String(Date.now()).slice(-4)}`,
+        invoiceNumber: `PI-${new Date().toISOString().slice(0, 10).replaceAll('-', '')}-${String(Date.now()).slice(-4)}`,
         invoiceDate: new Date().toISOString().slice(0, 10),
         invoiceStatus: 'Generated',
         sellerLegalName: 'Laghu Udyog Bharati Tamil Nadu',

@@ -13,6 +13,7 @@ import { RefreshListButton } from '../../shared/components/RefreshListButton';
 type SortKey = 'booking' | 'status' | 'expectedAmount' | 'blockExpiresAt';
 type SortDirection = 'asc' | 'desc';
 type StatusFilter = 'All' | 'BlockedAwaitingPayment' | 'PaymentSubmitted';
+type PaymentType = 'Full' | 'Part' | 'Extra';
 type SponsorFilter = 'All' | 'Sponsor' | 'Regular';
 const BOOKINGS_KEY = ['admin', 'bookings'] as const;
 const SPONSOR_STALLS_KEY = ['admin', 'sponsor-stalls'] as const;
@@ -64,12 +65,13 @@ export function PaymentQueuePage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(PAGE_SIZE_OPTIONS[0]);
   const [viewBooking, setViewBooking] = useState<StallBooking | null>(null);
-  const [paymentType, setPaymentType] = useState<'Full' | 'Part'>('Full');
+  const [paymentType, setPaymentType] = useState<PaymentType>('Full');
 
   const [paymentForm, setPaymentForm] = useState({
     paymentReferenceNumber: '',
     paymentDate: new Date().toISOString().slice(0, 10),
     isTdsDeductable: false,
+    tdsPercentage: 2,
     isGstApplicable: true,
     payerName: '',
     payerBank: '',
@@ -77,6 +79,7 @@ export function PaymentQueuePage() {
     gstAmount: '',
     amountPaid: 0,
     partAmountPaid: 0,
+    extraAmountPaid: 0,
     remarks: '',
     TargetSponsorTotal: 0
   });
@@ -389,14 +392,16 @@ export function PaymentQueuePage() {
     const alreadyPaid = getPaidAmount(booking);
     const balanceDue = getBalanceAmount(booking);
     const hasExistingPartPayment = alreadyPaid > 0 && balanceDue > 0;
+    const isFullyPaid = alreadyPaid > 0 && balanceDue <= 0;
 
     setSelectedBooking(booking);
-    setPaymentType(hasExistingPartPayment ? 'Part' : 'Full');
+    setPaymentType(isFullyPaid ? 'Extra' : (hasExistingPartPayment ? 'Part' : 'Full'));
     const existingTarget = sponsorStall ? getSponsorTargetAmount(booking) : Number(booking.expectedAmount || 0);
 
     setPaymentForm({
       paymentReferenceNumber: '',
       isTdsDeductable: paymentForm.isTdsDeductable,
+      tdsPercentage: paymentForm.tdsPercentage || 2,
       isGstApplicable: paymentForm.isGstApplicable,
       paymentDate: new Date().toISOString().slice(0, 10),
       payerName: booking.companyName || booking.fasciaName || '',
@@ -405,26 +410,32 @@ export function PaymentQueuePage() {
       gstAmount: paymentForm.gstAmount,
       amountPaid: sponsorStall
         ? 0
-        : hasExistingPartPayment
-          ? balanceDue
-          : Number(booking.expectedAmount),
+        : isFullyPaid
+          ? 0
+          : hasExistingPartPayment
+            ? balanceDue
+            : Number(booking.expectedAmount),
 
       partAmountPaid: sponsorStall
         ? 0
-        : hasExistingPartPayment
-          ? balanceDue
-          : 0,
+        : isFullyPaid
+          ? 0
+          : hasExistingPartPayment
+            ? balanceDue
+            : 0,
+      extraAmountPaid: 0,
       TargetSponsorTotal: existingTarget,
-      remarks: sponsorStall ? "Sponsor Stall" : "",
+      remarks: sponsorStall ? "Sponsor Stall" : (isFullyPaid ? "Extra Payment" : ""),
     });
   }
 
-  function handlePaymentTypeChange(nextType: 'Full' | 'Part') {
+  function handlePaymentTypeChange(nextType: PaymentType) {
     setPaymentType(nextType);
 
     setPaymentForm(previous => ({
       ...previous,
       partAmountPaid: nextType === 'Part' ? previous.partAmountPaid : 0,
+      extraAmountPaid: nextType === 'Extra' ? previous.extraAmountPaid : 0,
     }));
   }
 
@@ -455,7 +466,9 @@ export function PaymentQueuePage() {
       const effectiveAmountPaid =
         paymentType === 'Part'
           ? Number(paymentForm.partAmountPaid)
-          : Number(paymentForm.amountPaid);
+          : paymentType === 'Extra'
+            ? Number(paymentForm.extraAmountPaid)
+            : Number(paymentForm.amountPaid);
       const sponsorStall = isSponsorStall(selectedBooking);
 
       const gstAmount = sponsorStall && paymentForm.isGstApplicable
@@ -466,17 +479,9 @@ export function PaymentQueuePage() {
         alert(
           paymentType === 'Part'
             ? 'Enter a valid part amount'
-            : 'Valid amount required'
-        );
-        return;
-      }
-
-      if (
-        paymentType === 'Part' &&
-        effectiveAmountPaid > balanceDue
-      ) {
-        alert(
-          `Part amount cannot exceed the balance due (₹${balanceDue.toLocaleString('en-IN')}).`
+            : paymentType === 'Extra'
+              ? 'Enter a valid extra payment amount'
+              : 'Valid amount required'
         );
         return;
       }
@@ -493,6 +498,7 @@ export function PaymentQueuePage() {
         remarks: paymentForm.remarks.trim(),
         overrideExpiredBlock: false,
         isTdsDeductable: paymentForm.isTdsDeductable,
+        tdsPercentage: paymentForm.isTdsDeductable ? Number(paymentForm.tdsPercentage || 2) : undefined,
 
         TargetSponsorTotal: sponsorStall ? Number(paymentForm.TargetSponsorTotal) : null,
         isGstApplicable: paymentForm.isGstApplicable,
@@ -501,9 +507,11 @@ export function PaymentQueuePage() {
       });
 
       alert(
-        paymentType === 'Part'
-          ? 'Part payment verified successfully. Booking will stay in the queue until the balance is paid.'
-          : 'Payment verified successfully'
+        paymentType === 'Extra'
+          ? 'Extra payment verified successfully.'
+          : (paymentType === 'Part' && effectiveAmountPaid < balanceDue)
+            ? 'Part payment verified successfully. Booking will stay in the queue until the balance is paid.'
+            : 'Payment verified successfully.'
       );
 
       setSelectedBooking(null);
@@ -536,27 +544,34 @@ export function PaymentQueuePage() {
       'Is Sponsor',
       'Expected Amount',
       'Amount Paid',
+      'Excess Paid',
       'Balance Due',
       'Stall Number',
       'District',
       'Block Expires At',
     ];
 
-    const csvRows = visibleBookings.map(b => [
-      `"${b.bookingRegistrationNumber || ''}"`,
-      `"${b.fasciaName || ''}"`,
-      `"${b.companyName || ''}"`,
-      b.bookingStatus || '',
-      isSponsorStall(b) ? 'Yes' : 'No',
-      Number(b.expectedAmount || 0),
-      getPaidAmount(b),
-      getBalanceAmount(b),
-      `"${b.stallNumber || ''}"`,
-      `"${b.district || ''}"`,
-      b.blockExpiresAt
-        ? new Date(b.blockExpiresAt).toLocaleString('en-IN')
-        : '',
-    ]);
+    const csvRows = visibleBookings.map(b => {
+      const paid = getPaidAmount(b);
+      const expected = Number(b.expectedAmount || 0);
+      const excess = paid > expected ? paid - expected : 0;
+      return [
+        `"${b.bookingRegistrationNumber || ''}"`,
+        `"${b.fasciaName || ''}"`,
+        `"${b.companyName || ''}"`,
+        excess > 0 ? 'Excess Paid' : (b.bookingStatus || ''),
+        isSponsorStall(b) ? 'Yes' : 'No',
+        expected,
+        paid,
+        excess,
+        getBalanceAmount(b),
+        `"${b.stallNumber || ''}"`,
+        `"${b.district || ''}"`,
+        b.blockExpiresAt
+          ? new Date(b.blockExpiresAt).toLocaleString('en-IN')
+          : '',
+      ];
+    });
 
     const csvContent = [headers.join(','), ...csvRows.map(row => row.join(','))].join('\n');
 
@@ -759,9 +774,9 @@ export function PaymentQueuePage() {
             value={statusFilter}
             onChange={e => setStatusFilter(e.target.value as StatusFilter)}
           >
-            <option value="All">All Statuses</option>
+            <option value="All">All Queue Statuses</option>
             <option value="BlockedAwaitingPayment">Blocked Awaiting Payment</option>
-            <option value="PaymentSubmitted">Payment Submitted</option>
+            <option value="PaymentSubmitted">Payment Verified</option>
           </select>
 
           <select
@@ -791,7 +806,7 @@ export function PaymentQueuePage() {
 
         <p className="mt-3 whitespace-nowrap text-sm text-slate-500">
           <span className="font-bold text-slate-900">{visibleBookings.length}</span> of{' '}
-          <span className="font-bold text-slate-900">{bookings.length}</span> pending
+          <span className="font-bold text-slate-900">{bookings.length}</span> pending verification
         </p>
       </div>
 
@@ -855,6 +870,13 @@ export function PaymentQueuePage() {
 
                 <td className="p-4">
                   <StatusBadge value={booking.bookingStatus} />
+                  {getPaidAmount(booking) > Number(booking.expectedAmount || 0) && (
+                    <div className="mt-1">
+                      <span className="inline-flex items-center rounded-full bg-purple-50 px-2 py-0.5 text-[11px] font-bold text-purple-700 ring-1 ring-inset ring-purple-600/20">
+                        Excess Paid
+                      </span>
+                    </div>
+                  )}
                 </td>
 
                 <td className="p-4 font-semibold">
@@ -863,7 +885,13 @@ export function PaymentQueuePage() {
                     <div className="mt-1 text-xs font-normal text-slate-500">
                       <span className="text-emerald-600">₹{getPaidAmount(booking).toLocaleString('en-IN')} paid</span>
                       {' · '}
-                      <span className="text-amber-600">₹{getBalanceAmount(booking).toLocaleString('en-IN')} due</span>
+                      {getPaidAmount(booking) > Number(booking.expectedAmount || 0) ? (
+                        <span className="font-bold text-purple-700">
+                          +₹{(getPaidAmount(booking) - Number(booking.expectedAmount || 0)).toLocaleString('en-IN')} excess
+                        </span>
+                      ) : (
+                        <span className="text-amber-600">₹{getBalanceAmount(booking).toLocaleString('en-IN')} due</span>
+                      )}
                     </div>
                   )}
                 </td>
@@ -1008,14 +1036,25 @@ export function PaymentQueuePage() {
                         </span>
                       }
                     />
-                    <DetailRow
-                      label="Due"
-                      value={
-                        <span className="font-semibold text-amber-700">
-                          ₹{getBalanceAmount(viewBooking).toLocaleString('en-IN')}
-                        </span>
-                      }
-                    />
+                    {getPaidAmount(viewBooking) > Number(viewBooking.expectedAmount || 0) ? (
+                      <DetailRow
+                        label="Excess Paid"
+                        value={
+                          <span className="font-bold text-purple-700">
+                            +₹{(getPaidAmount(viewBooking) - Number(viewBooking.expectedAmount || 0)).toLocaleString('en-IN')}
+                          </span>
+                        }
+                      />
+                    ) : (
+                      <DetailRow
+                        label="Due"
+                        value={
+                          <span className="font-semibold text-amber-700">
+                            ₹{getBalanceAmount(viewBooking).toLocaleString('en-IN')}
+                          </span>
+                        }
+                      />
+                    )}
                   </>
                 )}
                 <DetailRow label="Stall Number" value={viewBooking.stallNumber || '—'} />
@@ -1147,24 +1186,52 @@ export function PaymentQueuePage() {
       </div>
 
       {selectedBooking && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[9999]">
-          <div className="bg-white rounded-xl p-6 w-full max-w-2xl shadow-xl">
-            <h3 className="text-xl font-bold">Verify Payment</h3>
+        <div
+          className="fixed inset-0 z-[9999] overflow-y-auto bg-black/60 p-4 sm:p-6 md:p-8"
+          onClick={() => setSelectedBooking(null)}
+        >
+          <div className="flex min-h-full items-center justify-center">
+            <div
+              className="bg-white rounded-xl p-6 w-full max-w-2xl shadow-xl my-auto"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-start justify-between">
+                <div>
+                  <h3 className="text-xl font-bold">Verify Payment</h3>
+                  <p className="text-sm text-slate-500 mt-1">
+                    Booking No: {selectedBooking.bookingRegistrationNumber}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedBooking(null)}
+                  className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition"
+                  aria-label="Close"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
 
-            <p className="text-sm text-slate-500 mt-1">
-              Booking No: {selectedBooking.bookingRegistrationNumber}
-            </p>
+              <p className="mt-2 rounded-lg bg-slate-50 border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600">
+                Full Stall Amount ₹{Number(selectedBooking.expectedAmount || 0).toLocaleString('en-IN')}
+              </p>
 
-            <p className="mt-2 rounded-lg bg-slate-50 border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600">
-              Full Stall Amount ₹{Number(selectedBooking.expectedAmount || 0).toLocaleString('en-IN')}
-            </p>
-
-            {getPaidAmount(selectedBooking) > 0 && (
+            {getPaidAmount(selectedBooking) > Number(selectedBooking.expectedAmount || 0) ? (
+              <div className="mt-2 rounded-lg bg-purple-50 border border-purple-200 px-3 py-2 text-xs font-semibold text-purple-800">
+                Already paid ₹{getPaidAmount(selectedBooking).toLocaleString('en-IN')} (Includes +₹{(getPaidAmount(selectedBooking) - Number(selectedBooking.expectedAmount || 0)).toLocaleString('en-IN')} excess). Any additional payment recorded will be treated as an extra payment.
+              </div>
+            ) : getPaidAmount(selectedBooking) >= Number(selectedBooking.expectedAmount || 0) && Number(selectedBooking.expectedAmount || 0) > 0 ? (
+              <p className="mt-2 rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2 text-xs font-semibold text-emerald-800">
+                Already fully paid ₹{getPaidAmount(selectedBooking).toLocaleString('en-IN')}. Any additional payment recorded will be treated as an extra payment.
+              </p>
+            ) : getPaidAmount(selectedBooking) > 0 ? (
               <p className="mt-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs font-semibold text-amber-700">
                 Already paid ₹{getPaidAmount(selectedBooking).toLocaleString('en-IN')} — ₹
                 {getBalanceAmount(selectedBooking).toLocaleString('en-IN')} more to pay
               </p>
-            )}
+            ) : null}
 
             <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
               <label className="block">
@@ -1174,10 +1241,11 @@ export function PaymentQueuePage() {
                 <select
                   className="input"
                   value={paymentType}
-                  onChange={e => handlePaymentTypeChange(e.target.value as 'Full' | 'Part')}
+                  onChange={e => handlePaymentTypeChange(e.target.value as PaymentType)}
                 >
                   <option value="Full">Full Amount</option>
                   <option value="Part">Part Amount</option>
+                  <option value="Extra">Extra Payment</option>
                 </select>
               </label>
 
@@ -1229,7 +1297,7 @@ export function PaymentQueuePage() {
                 </div>
               )}
 
-              <div className="mt-2 flex gap-6 sm:col-span-2">
+              <div className="mt-2 flex flex-wrap items-center gap-6 sm:col-span-2">
                 <Check
                   label="TDS Deductable"
                   name="isTdsDeductable"
@@ -1245,6 +1313,61 @@ export function PaymentQueuePage() {
                   />
                 )}
               </div>
+
+              {paymentForm.isTdsDeductable && (
+                <div className="rounded-xl border border-blue-200 bg-blue-50/60 p-3 sm:col-span-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <label className="text-xs font-semibold uppercase tracking-wide text-slate-700">
+                      TDS Deduction Percentage (%)
+                    </label>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs text-slate-500">Presets:</span>
+                      {[2, 10, 1, 0.1].map(rate => (
+                        <button
+                          key={rate}
+                          type="button"
+                          onClick={() => setPaymentForm(prev => ({ ...prev, tdsPercentage: rate }))}
+                          className={`rounded px-2 py-0.5 text-xs font-medium border transition-colors ${paymentForm.tdsPercentage === rate
+                              ? 'bg-blue-600 text-white border-blue-600 font-semibold'
+                              : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
+                            }`}
+                        >
+                          {rate}%
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="mt-2 flex items-center gap-3">
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      max="100"
+                      className="input w-36 font-semibold"
+                      value={paymentForm.tdsPercentage}
+                      onChange={e =>
+                        setPaymentForm(prev => ({
+                          ...prev,
+                          tdsPercentage: parseFloat(e.target.value) || 0,
+                        }))
+                      }
+                      placeholder="e.g. 2"
+                    />
+                    <span className="text-sm font-bold text-slate-600">%</span>
+                    {selectedBooking && (
+                      <span className="text-xs text-slate-500">
+                        Estimated TDS deduction: ₹
+                        {(
+                          Math.round(
+                            (Number(selectedBooking.expectedAmount || 0) / 1.18) *
+                            (Number(paymentForm.tdsPercentage || 0) / 100)
+                          )
+                        ).toLocaleString('en-IN')}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {paymentForm.isGstApplicable && isSponsorStall(selectedBooking) && (
                 <label className="block sm:col-span-2">
@@ -1314,7 +1437,7 @@ export function PaymentQueuePage() {
               {paymentType === 'Full' && (
                 <label className="block sm:col-span-2">
                   <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    Amount Paid (Full Settlement)
+                    Amount Paid (Full Settlement / Extra)
                   </span>
                   <input
                     className="input"
@@ -1333,6 +1456,11 @@ export function PaymentQueuePage() {
                       });
                     }}
                   />
+                  {selectedBooking && Number(paymentForm.amountPaid || 0) > getBalanceAmount(selectedBooking) && getBalanceAmount(selectedBooking) > 0 && (
+                    <span className="mt-1 block text-xs text-purple-700">
+                      Amount exceeds current balance due. Extra amount (₹{(Number(paymentForm.amountPaid || 0) - getBalanceAmount(selectedBooking)).toLocaleString('en-IN')}) will be recorded as extra payment.
+                    </span>
+                  )}
                 </label>
               )}
 
@@ -1342,9 +1470,9 @@ export function PaymentQueuePage() {
                     Part Amount Paid Now
                   </span>
                   <input
-                    className={`input ${partAmountExceedsBalance ? 'border-red-400 focus:ring-red-200' : ''}`}
+                    className="input"
                     type="number"
-                    placeholder={`Enter part payment amount (Max: ₹${isSponsorStall(selectedBooking)
+                    placeholder={`Enter part payment amount (Balance: ₹${isSponsorStall(selectedBooking)
                       ? Math.max(0, (paymentForm.TargetSponsorTotal || 0) - getPaidAmount(selectedBooking)).toLocaleString('en-IN')
                       : getBalanceAmount(selectedBooking).toLocaleString('en-IN')
                       })`}
@@ -1357,14 +1485,37 @@ export function PaymentQueuePage() {
                     }
                   />
                   {partAmountExceedsBalance ? (
-                    <span className="mt-1 block text-xs font-semibold text-red-600">
-                      This exceeds the balance due. Switch to "Full Amount" if clearing full settlement.
+                    <span className="mt-1 block text-xs font-semibold text-purple-700">
+                      Amount exceeds remaining balance (₹{getBalanceAmount(selectedBooking).toLocaleString('en-IN')}). The excess (₹{(Number(paymentForm.partAmountPaid || 0) - getBalanceAmount(selectedBooking)).toLocaleString('en-IN')}) will be recorded as an extra payment.
                     </span>
                   ) : (
                     <span className="mt-1 block text-xs text-slate-600">
                       Booking stays in the queue until the remaining balance is paid.
                     </span>
                   )}
+                </label>
+              )}
+
+              {paymentType === 'Extra' && (
+                <label className="block sm:col-span-2 rounded-xl border border-purple-200 bg-purple-50 p-3">
+                  <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-purple-800">
+                    Extra Payment Amount Paid Now
+                  </span>
+                  <input
+                    className="input border-purple-300 bg-white"
+                    type="number"
+                    placeholder="Enter extra payment amount (₹)"
+                    value={paymentForm.extraAmountPaid || ''}
+                    onChange={e =>
+                      setPaymentForm({
+                        ...paymentForm,
+                        extraAmountPaid: Number(e.target.value),
+                      })
+                    }
+                  />
+                  <span className="mt-1 block text-xs text-purple-700">
+                    Record and verify an additional / extra payment for this booking.
+                  </span>
                 </label>
               )}
 
@@ -1396,7 +1547,7 @@ export function PaymentQueuePage() {
               <button
                 type="button"
                 className="btn-primary"
-                disabled={saving || !canVerify || partAmountExceedsBalance}
+                disabled={saving || !canVerify}
                 onClick={submitVerifyPayment}
               >
                 {saving ? 'Saving...' : 'Save & Verify'}
@@ -1404,16 +1555,18 @@ export function PaymentQueuePage() {
             </div>
           </div>
         </div>
+      </div>
       )}
       {actionButton && (
         <div
-          className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-[9999] overflow-y-auto bg-slate-950/60 p-4 backdrop-blur-sm"
           onClick={() => setShowActionButton(null)}
         >
-          <div
-            className="w-full max-w-xl overflow-hidden rounded-2xl bg-white shadow-2xl"
-            onClick={(event) => event.stopPropagation()}
-          >
+          <div className="flex min-h-full items-center justify-center">
+            <div
+              className="w-full max-w-xl overflow-hidden rounded-2xl bg-white shadow-2xl my-auto"
+              onClick={(event) => event.stopPropagation()}
+            >
             {/* Header */}
             <div className="border-b border-slate-200 bg-slate-50 px-6 py-5">
               <div className="flex items-start justify-between gap-4">
@@ -1476,6 +1629,16 @@ export function PaymentQueuePage() {
                 <p className="mt-1 text-base font-bold text-slate-900">
                   {actionButton.bookingRegistrationNumber}
                 </p>
+                {getPaidAmount(actionButton) > Number(actionButton.expectedAmount || 0) && (
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <span className="inline-flex items-center rounded-full bg-purple-50 px-2.5 py-1 text-xs font-bold text-purple-700 ring-1 ring-inset ring-purple-600/20">
+                      Excess Paid (+₹{(getPaidAmount(actionButton) - Number(actionButton.expectedAmount || 0)).toLocaleString('en-IN')})
+                    </span>
+                    <span className="text-xs text-slate-500">
+                      Total Paid: ₹{getPaidAmount(actionButton).toLocaleString('en-IN')} (Stall: ₹{Number(actionButton.expectedAmount || 0).toLocaleString('en-IN')})
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -1760,6 +1923,7 @@ export function PaymentQueuePage() {
             </div>
           </div>
         </div>
+      </div>
       )}
       {extendTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">

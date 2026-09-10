@@ -104,7 +104,9 @@ public sealed class ExhibitorPortalController : ControllerBase
         return Ok(new
         {
             token = new JwtSecurityTokenHandler().WriteToken(token),
-            companyName = string.IsNullOrWhiteSpace(exhibitor.TradeName) ? exhibitor.LegalName : exhibitor.TradeName,
+            companyName = string.IsNullOrWhiteSpace(exhibitor.LegalName) ? (exhibitor.TradeName ?? "Exhibitor") : exhibitor.LegalName,
+            tradeName = exhibitor.TradeName,
+            legalName = exhibitor.LegalName,
             registrationNumber = booking.BookingRegistrationNumber,
             fasciaName = booking.FasciaName
         });
@@ -620,33 +622,81 @@ public sealed class ExhibitorPortalController : ControllerBase
 
     /// <summary>
     /// Sends a personalized direct email from the logged-in exhibitor to any manually entered recipient email.
+    /// Supports attaching the exhibitor's official E-Card image (PNG/JPEG) and dispatching an optional copy to the exhibitor.
     /// Uses system SMTP credentials securely from backend, with Reply-To set to the exhibitor's registered email.
     /// </summary>
     [Authorize]
     [HttpPost("exhibitor/send-email")]
-    public async Task<IActionResult> SendCustomEmail([FromBody] ExhibitorSendEmailRequest request, CancellationToken ct)
+    [RequestSizeLimit(6 * 1024 * 1024)]
+    public async Task<IActionResult> SendCustomEmail(CancellationToken ct)
     {
         var exhibitorId = GetExhibitorId();
         if (exhibitorId is null) return Forbid();
 
-        if (request is null)
-            return BadRequest(new { message = "Invalid request payload." });
+        string? toEmail = null;
+        string? subject = null;
+        string? message = null;
+        string? visitorName = null;
+        bool attachECard = true;
+        bool sendCopyToMe = false;
+        string? cardImageBase64 = null;
+        string? templateKey = null;
+        IFormFile? cardImage = null;
 
-        var toEmail = request.ToEmail?.Trim();
+        if (Request.HasFormContentType)
+        {
+            var form = await Request.ReadFormAsync(ct);
+            toEmail = form["toEmail"].FirstOrDefault();
+            subject = form["subject"].FirstOrDefault();
+            message = form["message"].FirstOrDefault();
+            visitorName = form["visitorName"].FirstOrDefault();
+            templateKey = form["templateKey"].FirstOrDefault();
+            bool.TryParse(form["attachECard"].FirstOrDefault(), out attachECard);
+            bool.TryParse(form["sendCopyToMe"].FirstOrDefault(), out sendCopyToMe);
+            cardImageBase64 = form["cardImageBase64"].FirstOrDefault();
+            cardImage = form.Files.GetFile("cardImage");
+        }
+        else
+        {
+            var jsonRequest = await System.Text.Json.JsonSerializer.DeserializeAsync<ExhibitorSendEmailRequest>(
+                Request.Body,
+                new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true },
+                ct);
+
+            if (jsonRequest is null)
+                return BadRequest(new { message = "Invalid request payload." });
+
+            toEmail = jsonRequest.ToEmail;
+            subject = jsonRequest.Subject;
+            message = jsonRequest.Message;
+            visitorName = jsonRequest.VisitorName;
+            templateKey = jsonRequest.TemplateKey;
+            attachECard = jsonRequest.AttachECard;
+            sendCopyToMe = jsonRequest.SendCopyToMe;
+            cardImageBase64 = jsonRequest.CardImageBase64;
+        }
+
+        toEmail = toEmail?.Trim();
         if (string.IsNullOrWhiteSpace(toEmail) || !System.Net.Mail.MailAddress.TryCreate(toEmail, out _))
             return BadRequest(new { message = "A valid 'To Email' address is required." });
 
-        if (string.IsNullOrWhiteSpace(request.Subject))
+        if (string.IsNullOrWhiteSpace(subject))
             return BadRequest(new { message = "Email Subject is required." });
 
-        if (string.IsNullOrWhiteSpace(request.Message))
+        if (string.IsNullOrWhiteSpace(message))
             return BadRequest(new { message = "Email Message content is required." });
+
+        if (cardImage is not null && cardImage.Length > 5 * 1024 * 1024)
+            return BadRequest(new { message = "Stall card image must be 5 MB or smaller." });
 
         var exhibitor = await _db.Exhibitors.AsNoTracking().SingleOrDefaultAsync(e => e.Id == exhibitorId, ct);
         if (exhibitor is null) return NotFound(new { message = "Exhibitor record not found." });
 
+        var bookingClaim = User.FindFirst("bookingId")?.Value;
+        Guid.TryParse(bookingClaim, out var claimBookingId);
+
         var booking = await _db.StallBookings.AsNoTracking()
-            .Where(b => b.ExhibitorId == exhibitorId)
+            .Where(b => (claimBookingId != Guid.Empty && b.Id == claimBookingId) || b.ExhibitorId == exhibitorId)
             .OrderByDescending(b => b.CreatedAt)
             .FirstOrDefaultAsync(ct);
 
@@ -677,47 +727,90 @@ public sealed class ExhibitorPortalController : ControllerBase
             return BadRequest(new { message = "Your exhibitor account does not have a registered email address to receive replies." });
         }
 
-        var visitorGreetingName = !string.IsNullOrWhiteSpace(request.VisitorName)
-            ? request.VisitorName.Trim()
+        var visitorGreetingName = !string.IsNullOrWhiteSpace(visitorName)
+            ? visitorName.Trim()
             : "Valued Partner";
 
-        // Render template with dynamic values
-        var templateDef = EmailTemplateCatalog.AllTemplates.TryGetValue("EXHIBITOR_DIRECT_EMAIL", out var def) ? def : null;
-        var values = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+        // Generate card attachment bytes from cardImageBase64 or uploaded cardImage file
+        byte[] cardBytes = Array.Empty<byte>();
+        string attachmentFileName = string.Empty;
+        var cleanStall = string.Join("_", stallNumber.Split(Path.GetInvalidFileNameChars()));
+
+        if (attachECard)
+        {
+            if (!string.IsNullOrWhiteSpace(cardImageBase64))
+            {
+                try
+                {
+                    var base64Data = cardImageBase64.Contains(",")
+                        ? cardImageBase64.Substring(cardImageBase64.IndexOf(",") + 1)
+                        : cardImageBase64;
+                    cardBytes = Convert.FromBase64String(base64Data);
+                    attachmentFileName = $"StallCard_{cleanStall}_{DateTime.UtcNow:yyyyMMdd}.png";
+                }
+                catch { cardBytes = Array.Empty<byte>(); }
+            }
+            else if (cardImage is not null && cardImage.Length > 0)
+            {
+                var extension = cardImage.ContentType.Contains("jpeg", StringComparison.OrdinalIgnoreCase) || cardImage.ContentType.Contains("jpg", StringComparison.OrdinalIgnoreCase)
+                    ? ".jpg"
+                    : ".png";
+                attachmentFileName = $"StallCard_{cleanStall}_{DateTime.UtcNow:yyyyMMdd}{extension}";
+
+                using var ms = new MemoryStream();
+                await cardImage.CopyToAsync(ms, ct);
+                cardBytes = ms.ToArray();
+            }
+        }
+
+        var formattedMessage = FormatMessageLinks(message.Trim());
+
+        bool isB2B = string.Equals(templateKey, "b2b_sourcing", StringComparison.OrdinalIgnoreCase)
+            || subject.Contains("B2B", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("buyer/register", StringComparison.OrdinalIgnoreCase);
+
+        string registrationBoxHtml = isB2B
+            ? $@"<div style=""margin: 18px 0; padding: 16px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; text-align: center;"">
+                    <p style=""margin: 0 0 12px 0; font-weight: 700; color: #0B3B75; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;"">B2B Connect & Registration Portal</p>
+                    <table style=""margin: 0 auto; border-collapse: separate; border-spacing: 12px 0;"">
+                        <tr>
+                            <td style=""background: #ffffff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 16px; text-align: center;"">
+                                <p style=""margin: 0 0 8px 0; font-size: 12px; font-weight: 600; color: #334155;"">For Sourcing & Procurement</p>
+                                <a href=""https://msmesangamam.lubtn.com/buyer/register"" target=""_blank"" style=""display: inline-block; background: #0B3B75; color: #ffffff; padding: 8px 16px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 13px;"">Register as Buyer &rarr;</a>
+                            </td>
+                            <td style=""background: #ffffff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 16px; text-align: center;"">
+                                <p style=""margin: 0 0 8px 0; font-size: 12px; font-weight: 600; color: #334155;"">For Vendors & Manufacturers</p>
+                                <a href=""https://msmesangamam.lubtn.com/seller/register"" target=""_blank"" style=""display: inline-block; background: #15803d; color: #ffffff; padding: 8px 16px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 13px;"">Register as Seller &rarr;</a>
+                            </td>
+                        </tr>
+                    </table>
+                </div>"
+            : $@"<div style=""margin: 16px 0; padding: 14px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; text-align: center;"">
+                    <p style=""margin: 0 0 8px 0; font-weight: 600; color: #1e40af;"">Please register as a visitor to attend the expo:</p>
+                    <a href=""https://msmesangamam.lubtn.com/visitor"" target=""_blank"" style=""display: inline-block; background: #0B3B75; color: #fff; padding: 8px 18px; text-decoration: none; border-radius: 6px; font-weight: 600;"">Register as Visitor &rarr;</a>
+                </div>";
+
+        var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
             ["visitorName"] = visitorGreetingName,
-            ["VisitorName"] = visitorGreetingName,
             ["companyName"] = companyName,
-            ["CompanyName"] = companyName,
             ["exhibitorName"] = contactPerson,
-            ["ExhibitorName"] = contactPerson,
             ["stallNumber"] = stallNumber,
-            ["StallNumber"] = stallNumber,
-            ["customMessage"] = request.Message.Trim(),
-            ["CustomMessage"] = request.Message.Trim(),
-            ["replyToEmail"] = exhibitorReplyTo,
-            ["ReplyToEmail"] = exhibitorReplyTo
+            ["customMessage"] = formattedMessage,
+            ["replyToEmail"] = exhibitorReplyTo
         };
 
-        var rawBody = templateDef?.DefaultHtmlBody;
-        string finalHtml;
-        if (!string.IsNullOrWhiteSpace(rawBody))
-        {
-            finalHtml = EmailTemplateCatalog.RenderTemplate(rawBody, values);
-        }
-        else
-        {
-            finalHtml = $@"<div style=""font-family: Arial, sans-serif; font-size: 15px; color: #222;"">
-                <p>Dear {visitorGreetingName},</p>
-                <div style=""margin: 16px 0; white-space: pre-wrap;"">{System.Net.WebUtility.HtmlEncode(request.Message.Trim())}</div>
-                <hr style=""border: 0; border-top: 1px solid #ddd; margin: 20px 0;""/>
-                <p><b>From:</b> {contactPerson} ({companyName})<br/><b>Stall Number:</b> {stallNumber}<br/><b>Reply-To:</b> <a href=""mailto:{exhibitorReplyTo}"">{exhibitorReplyTo}</a></p>
-            </div>";
-        }
+        string finalHtml = $@"<div style=""font-family: Arial, sans-serif; font-size: 15px; color: #222;"">
+            <p>Dear {visitorGreetingName},</p>
+            <div style=""margin: 16px 0; white-space: pre-wrap;"">{formattedMessage}</div>
+            {registrationBoxHtml}
+            {(cardBytes.Length > 0 ? @"<div style=""margin: 12px 0; color: #166534; font-weight: 600;"">📎 Stall card attached, please check.</div>" : "")}
+            <hr style=""border: 0; border-top: 1px solid #ddd; margin: 20px 0;""/>
+            <p><b>From:</b> {contactPerson} ({companyName})<br/><b>Stall Number:</b> {stallNumber}<br/><b>Reply-To:</b> <a href=""mailto:{exhibitorReplyTo}"">{exhibitorReplyTo}</a></p>
+        </div>";
 
-        var renderedSubject = EmailTemplateCatalog.RenderTemplate(request.Subject.Trim(), values);
+        var renderedSubject = EmailTemplateCatalog.RenderTemplate(subject.Trim(), values);
 
-        // Record in EmailLogs for audit trail
         var emailLog = EmailLog.Create(
             booking?.TenantId ?? exhibitor.TenantId,
             booking?.EventId,
@@ -730,13 +823,61 @@ public sealed class ExhibitorPortalController : ControllerBase
         _db.EmailLogs.Add(emailLog);
         await _db.SaveChangesAsync(ct);
 
-        // Send with Reply-To set to the logged-in exhibitor
-        await _emailSender.SendEmailAsync(
-            toEmail,
-            renderedSubject,
-            finalHtml,
-            replyToEmail: exhibitorReplyTo,
-            replyToName: contactPerson);
+        try
+        {
+            // Send with attachment if card image bytes exist
+            if (cardBytes.Length > 0)
+            {
+                await _emailSender.SendEmailWithAttachmentAsync(
+                    toEmail,
+                    renderedSubject,
+                    finalHtml,
+                    cardBytes,
+                    attachmentFileName,
+                    replyToEmail: exhibitorReplyTo,
+                    replyToName: contactPerson);
+
+                if (sendCopyToMe && !string.IsNullOrWhiteSpace(exhibitorReplyTo) && !exhibitorReplyTo.Equals(toEmail, StringComparison.OrdinalIgnoreCase))
+                {
+                    await _emailSender.SendEmailWithAttachmentAsync(
+                        exhibitorReplyTo,
+                        $"[Copy] {renderedSubject}",
+                        finalHtml,
+                        cardBytes,
+                        attachmentFileName,
+                        replyToEmail: exhibitorReplyTo,
+                        replyToName: contactPerson);
+                }
+            }
+            else
+            {
+                await _emailSender.SendEmailAsync(
+                    toEmail,
+                    renderedSubject,
+                    finalHtml,
+                    replyToEmail: exhibitorReplyTo,
+                    replyToName: contactPerson);
+
+                if (sendCopyToMe && !string.IsNullOrWhiteSpace(exhibitorReplyTo) && !exhibitorReplyTo.Equals(toEmail, StringComparison.OrdinalIgnoreCase))
+                {
+                    await _emailSender.SendEmailAsync(
+                        exhibitorReplyTo,
+                        $"[Copy] {renderedSubject}",
+                        finalHtml,
+                        replyToEmail: exhibitorReplyTo,
+                        replyToName: contactPerson);
+                }
+            }
+
+            emailLog.MarkSent(null);
+            await _db.SaveChangesAsync(ct);
+        }
+        catch (Exception ex)
+        {
+            emailLog.MarkFailed(ex.Message);
+            await _db.SaveChangesAsync(ct);
+            throw;
+        }
 
         return Ok(new
         {
@@ -744,8 +885,57 @@ public sealed class ExhibitorPortalController : ControllerBase
             toEmail,
             replyToEmail = exhibitorReplyTo,
             subject = renderedSubject,
+            hasCardAttached = cardBytes.Length > 0,
+            copySent = sendCopyToMe,
             sentAt = DateTime.UtcNow
         });
+    }
+
+    [Authorize]
+    [HttpGet("exhibitor/email-logs")]
+    public async Task<IActionResult> GetExhibitorEmailLogs(CancellationToken ct)
+    {
+        var exhibitorId = GetExhibitorId();
+        if (exhibitorId is null) return Forbid();
+
+        var exhibitor = await _db.Exhibitors.AsNoTracking().FirstOrDefaultAsync(e => e.Id == exhibitorId, ct);
+        if (exhibitor is null) return NotFound();
+
+        var bookingClaim = User.FindFirst("bookingId")?.Value;
+        Guid.TryParse(bookingClaim, out var claimBookingId);
+
+        var bookingIds = await _db.StallBookings.AsNoTracking()
+            .Where(b => b.ExhibitorId == exhibitorId || (claimBookingId != Guid.Empty && b.Id == claimBookingId))
+            .Select(b => b.Id)
+            .ToListAsync(ct);
+
+        if (!bookingIds.Any() && claimBookingId != Guid.Empty)
+        {
+            bookingIds.Add(claimBookingId);
+        }
+
+        if (!bookingIds.Any())
+        {
+            return Ok(Array.Empty<object>());
+        }
+
+        var logs = await _db.EmailLogs.AsNoTracking()
+            .Where(l => l.BookingId.HasValue && bookingIds.Contains(l.BookingId.Value) && l.TemplateCode == "EXHIBITOR_DIRECT_EMAIL")
+            .OrderByDescending(l => l.CreatedAt)
+            .Take(100)
+            .Select(l => new
+            {
+                id = l.Id,
+                toEmail = l.ToEmail,
+                subject = l.Subject,
+                status = l.Status.ToString(),
+                sentAt = l.SentAt ?? l.CreatedAt,
+                templateCode = l.TemplateCode,
+                hasAttachment = true
+            })
+            .ToListAsync(ct);
+
+        return Ok(logs);
     }
 
     private Guid? GetExhibitorId()
@@ -753,8 +943,24 @@ public sealed class ExhibitorPortalController : ControllerBase
         var value = User.FindFirst("exhibitorId")?.Value;
         return Guid.TryParse(value, out var id) ? id : null;
     }
+
+    private static string FormatMessageLinks(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return string.Empty;
+        var encoded = System.Net.WebUtility.HtmlEncode(text);
+        var urlRegex = new System.Text.RegularExpressions.Regex(@"(https?://[^\s<]+)");
+        return urlRegex.Replace(encoded, "<a href=\"$1\" target=\"_blank\" style=\"color:#2563eb; text-decoration:underline; font-weight:600;\">$1</a>");
+    }
 }
 
 public sealed record ExhibitorLoginRequest(string RegistrationNumber, string Mobile);
 public sealed record ScanVisitorRequest(string RegistrationNumber, string? Notes);
-public sealed record ExhibitorSendEmailRequest(string ToEmail, string Subject, string Message, string? VisitorName = null);
+public sealed record ExhibitorSendEmailRequest(
+    string ToEmail,
+    string Subject,
+    string Message,
+    string? VisitorName = null,
+    bool AttachECard = false,
+    bool SendCopyToMe = false,
+    string? CardImageBase64 = null,
+    string? TemplateKey = null);

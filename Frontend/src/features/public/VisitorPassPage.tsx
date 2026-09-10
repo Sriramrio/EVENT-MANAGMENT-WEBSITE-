@@ -9,6 +9,7 @@ import {
   Download,
   Loader2,
   AlertTriangle,
+  Building2,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import QRCode from 'react-qr-code';
@@ -75,10 +76,19 @@ export function VisitorPassPage() {
     setDownloading(true);
 
     try {
-      const canvas = await html2canvas(passRef.current, {
+      const element = passRef.current;
+      const images = Array.from(element.querySelectorAll('img'));
+      await Promise.all(
+        images.map(img => img.complete ? Promise.resolve() : new Promise(res => { img.onload = res; img.onerror = res; }))
+      );
+
+      const canvas = await html2canvas(element, {
         scale: 3,
         useCORS: true,
         backgroundColor: '#ffffff',
+        scrollX: 0,
+        scrollY: 0,
+        logging: false,
       });
 
       const image = canvas.toDataURL('image/jpeg', 0.98);
@@ -197,7 +207,14 @@ export function VisitorPassPage() {
                 {name}
               </h2>
 
-              <p className="mt-1 text-sm font-semibold text-[#0B3B75]">
+              {visitor.legalName && (
+                <div className="mt-1.5 flex items-center gap-2 text-sm sm:text-base font-bold text-slate-700">
+                  <Building2 size={17} className="text-[#0B3B75] shrink-0" />
+                  <span>{visitor.legalName}</span>
+                </div>
+              )}
+
+              <p className="mt-1.5 text-sm font-semibold text-[#0B3B75]">
                 Visitor ID: {visitor.registrationNumber}
               </p>
 
@@ -259,6 +276,10 @@ export function VisitorPassPage() {
           <div className="mt-8 rounded-xl bg-blue-50 px-4 py-3 text-center text-sm font-medium text-[#0B3B75]">
             Please show this pass at the event entrance.
           </div>
+        </div>
+
+        <div className="bg-[#0B3B75] py-2.5 text-center text-[10px] font-bold uppercase tracking-widest text-white border-t border-white/10">
+          MSME Sangamam Connect • Official Visitor Pass
         </div>
       </div>
     </div>

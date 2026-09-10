@@ -1,5 +1,5 @@
-import { useEffect, useState, useCallback } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useState, useCallback } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Heart,
   Phone,
@@ -12,13 +12,14 @@ import {
   CheckCircle2,
   Sparkles,
   IdCard,
-} from "lucide-react";
+} from 'lucide-react';
 import {
   exhibitorApiClient,
   ExhibitorApiError,
   getExhibitorToken,
   setExhibitorSession,
-} from "../../data/api/exhibitorApiClient";
+} from '../../data/api/exhibitorApiClient';
+import { StallProfilePage } from '../public/StallProfilePage';
 
 export interface InterestRow {
   id: string;
@@ -38,7 +39,7 @@ export interface MeResponse {
 function timeAgo(iso: string) {
   const diffMs = Date.now() - new Date(iso).getTime();
   const mins = Math.floor(diffMs / 60000);
-  if (mins < 1) return "just now";
+  if (mins < 1) return 'just now';
   if (mins < 60) return `${mins}m ago`;
   const hrs = Math.floor(mins / 60);
   if (hrs < 24) return `${hrs}h ago`;
@@ -47,7 +48,7 @@ function timeAgo(iso: string) {
 
 function initials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "?";
+  if (parts.length === 0) return '?';
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
   return (parts[0][0] + parts[1][0]).toUpperCase();
 }
@@ -58,46 +59,36 @@ export function ExhibitorDashboard() {
   const [interests, setInterests] = useState<InterestRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
+  const [showStallProfileModal, setShowStallProfileModal] = useState(false);
 
-  const load = useCallback(
-    async (isRefresh = false) => {
-      if (isRefresh) setRefreshing(true);
-      else setLoading(true);
-      setError("");
-      try {
-        const [meData, interestsData] = await Promise.all([
-          exhibitorApiClient.get<MeResponse>("/exhibitor/me"),
-          exhibitorApiClient.get<{ interests: InterestRow[] }>(
-            "/exhibitor/interests",
-          ),
-        ]);
-        setMe(meData);
-        setInterests(
-          Array.isArray(interestsData.interests) ? interestsData.interests : [],
-        );
-      } catch (err) {
-        if (err instanceof ExhibitorApiError && err.status === 401) {
-          setExhibitorSession(null, null);
-          navigate("/exhibitor/login");
-          return;
-        }
-        setError(
-          err instanceof ExhibitorApiError
-            ? err.message
-            : "Could not load your dashboard.",
-        );
-      } finally {
-        setLoading(false);
-        setRefreshing(false);
+  const load = useCallback(async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true);
+    else setLoading(true);
+    setError('');
+    try {
+      const [meData, interestsData] = await Promise.all([
+        exhibitorApiClient.get<MeResponse>('/exhibitor/me'),
+        exhibitorApiClient.get<{ interests: InterestRow[] }>('/exhibitor/interests'),
+      ]);
+      setMe(meData);
+      setInterests(Array.isArray(interestsData.interests) ? interestsData.interests : []);
+    } catch (err) {
+      if (err instanceof ExhibitorApiError && err.status === 401) {
+        setExhibitorSession(null, null);
+        navigate('/exhibitor/login');
+        return;
       }
-    },
-    [navigate],
-  );
+      setError(err instanceof ExhibitorApiError ? err.message : 'Could not load your dashboard.');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [navigate]);
 
   useEffect(() => {
     if (!getExhibitorToken()) {
-      navigate("/exhibitor/login");
+      navigate('/exhibitor/login');
       return;
     }
     load();
@@ -126,14 +117,11 @@ export function ExhibitorDashboard() {
           </p>
 
           <h2 className="text-2xl font-extrabold sm:text-3xl">
-            {me?.companyName
-              ? `${me.companyName}`
-              : "Manage your stall & connect with visitors"}
+            {me?.companyName ? `${me.companyName}` : 'Manage your stall & connect with visitors'}
           </h2>
 
           <p className="mt-3 text-sm leading-6 text-blue-100 sm:text-base">
-            Track visitors who scanned your stall QR code, view their contact
-            details, and save leads for post-event communication.
+            Track visitors who scanned your stall QR code, view their contact details, and save leads for post-event communication.
           </p>
 
           <div className="mt-6 flex flex-wrap gap-3">
@@ -165,15 +153,16 @@ export function ExhibitorDashboard() {
               <QrCode size={18} />
               My Stall QR
             </Link>
-            {/* {me?.registrationNumber && (
-              <Link
-                to={`/stall/${encodeURIComponent(me.registrationNumber)}`}
-                className="inline-flex items-center gap-2 rounded-xl bg-white/15 px-5 py-3 text-sm font-bold text-white transition hover:bg-white/25"
+            {me?.registrationNumber && (
+              <button
+                type="button"
+                onClick={() => setShowStallProfileModal(true)}
+                className="inline-flex items-center gap-2 rounded-xl bg-white/15 px-5 py-3 text-sm font-bold text-white transition hover:bg-white/25 cursor-pointer"
               >
                 <Building2 size={18} />
                 Public Stall Profile
-              </Link>
-            )} */}
+              </button>
+            )}
           </div>
         </div>
       </section>
@@ -182,22 +171,22 @@ export function ExhibitorDashboard() {
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Interested Visitors"
-          value={loading ? "—" : totalInterests}
+          value={loading ? '—' : totalInterests}
           subtitle="Visitors interested"
           icon={<Heart size={22} />}
         />
 
         <StatCard
           title="Today's Interest"
-          value={loading ? "—" : todayInterests}
+          value={loading ? '—' : todayInterests}
           subtitle="Connected today"
           icon={<Users size={22} />}
         />
 
         <StatCard
           title="Stall Info"
-          value={me?.stallNumber ? `Stall ${me.stallNumber}` : "Allocated"}
-          subtitle={me?.registrationNumber ?? "Exhibitor Stall"}
+          value={me?.stallNumber ? `Stall ${me.stallNumber}` : 'Allocated'}
+          subtitle={me?.registrationNumber ?? 'Exhibitor Stall'}
           icon={<Store size={22} />}
         />
 
@@ -214,7 +203,9 @@ export function ExhibitorDashboard() {
       <section className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-bold text-slate-900">Quick Actions</h3>
+            <h3 className="text-lg font-bold text-slate-900">
+              Quick Actions
+            </h3>
             <p className="text-sm text-slate-500">
               Access the most useful exhibitor features
             </p>
@@ -252,11 +243,7 @@ export function ExhibitorDashboard() {
           />
 
           <QuickAction
-            href={
-              me?.registrationNumber
-                ? `/stall/${encodeURIComponent(me.registrationNumber)}`
-                : "/exhibitorShell/Dashboard"
-            }
+            onClick={() => setShowStallProfileModal(true)}
             icon={<Building2 size={24} />}
             title="Stall Profile Page"
             description="Preview your public exhibitor profile & product showcase."
@@ -269,7 +256,9 @@ export function ExhibitorDashboard() {
         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4 sm:px-6">
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="font-bold text-slate-900">Interested Visitors</h3>
+              <h3 className="font-bold text-slate-900">
+                Interested Visitors
+              </h3>
               {unreadCount > 0 && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-orange-500 px-2.5 py-0.5 text-[11px] font-bold text-white">
                   <Sparkles size={11} /> {unreadCount} new
@@ -288,10 +277,7 @@ export function ExhibitorDashboard() {
               disabled={refreshing}
               className="inline-flex items-center gap-1.5 text-xs font-bold text-[#0B3B75] hover:underline disabled:opacity-50"
             >
-              <RefreshCw
-                size={14}
-                className={refreshing ? "animate-spin" : ""}
-              />
+              <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
               Refresh
             </button>
             <Link
@@ -318,34 +304,25 @@ export function ExhibitorDashboard() {
                 No interested visitors yet
               </p>
               <p className="mt-1 text-sm text-slate-500">
-                Once a visitor scans your stall QR and taps "I'm Interested",
-                they will appear here.
+                Once a visitor scans your stall QR and taps "I'm Interested", they will appear here.
               </p>
             </div>
           )}
 
           {interests.slice(0, 6).map((item) => {
-            const displayName = item.visitorName || "Visitor";
+            const displayName = item.visitorName || 'Visitor';
             return (
               <div
                 key={item.id}
-                className={`flex items-center justify-between gap-4 px-5 py-4 sm:px-6 transition ${
-                  item.isRead ? "" : "bg-blue-50/40"
-                }`}
+                className={`flex items-center justify-between gap-4 px-5 py-4 sm:px-6 transition ${item.isRead ? '' : 'bg-blue-50/40'
+                  }`}
               >
                 <div className="flex items-center gap-3 min-w-0">
                   <div
-                    className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-xs font-black ${
-                      item.isRead
-                        ? "bg-slate-100 text-slate-500"
-                        : "bg-[#0B3B75] text-white"
-                    }`}
+                    className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-xs font-black ${item.isRead ? 'bg-slate-100 text-slate-500' : 'bg-[#0B3B75] text-white'
+                      }`}
                   >
-                    {item.visitorName ? (
-                      initials(item.visitorName)
-                    ) : (
-                      <Heart size={18} />
-                    )}
+                    {item.visitorName ? initials(item.visitorName) : <Heart size={18} />}
                   </div>
 
                   <div className="min-w-0">
@@ -360,9 +337,7 @@ export function ExhibitorDashboard() {
                         <Phone size={12} /> {item.visitorMobile}
                       </a>
                     ) : (
-                      <p className="mt-0.5 text-xs text-slate-400">
-                        No contact shared
-                      </p>
+                      <p className="mt-0.5 text-xs text-slate-400">No contact shared</p>
                     )}
                   </div>
                 </div>
@@ -382,6 +357,16 @@ export function ExhibitorDashboard() {
           })}
         </div>
       </section>
+
+      {/* Stall Profile Preview Modal */}
+      {showStallProfileModal && me?.registrationNumber && (
+        <StallProfilePage
+          registrationNumber={me.registrationNumber}
+          isModal={true}
+          isPreview={true}
+          onClose={() => setShowStallProfileModal(false)}
+        />
+      )}
     </div>
   );
 }
@@ -403,11 +388,17 @@ function StatCard({
     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-sm font-semibold text-slate-500">{title}</p>
+          <p className="text-sm font-semibold text-slate-500">
+            {title}
+          </p>
 
-          <p className="mt-2 text-2xl font-extrabold text-slate-900">{value}</p>
+          <p className="mt-2 text-2xl font-extrabold text-slate-900">
+            {value}
+          </p>
 
-          <p className="mt-1 text-xs text-slate-400">{subtitle}</p>
+          <p className="mt-1 text-xs text-slate-400">
+            {subtitle}
+          </p>
         </div>
 
         <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-[#0B3B75]">
@@ -426,41 +417,61 @@ function StatCard({
 
 function QuickAction({
   href,
+  onClick,
   icon,
   title,
   description,
   count,
 }: {
-  href: string;
+  href?: string;
+  onClick?: () => void;
   icon: React.ReactNode;
   title: string;
   description: string;
   count?: number;
 }) {
-  return (
-    <Link
-      to={href}
-      className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md"
-    >
-      <div className="flex items-start gap-4">
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-[#0B3B75]">
+  const content = (
+    <div className="flex h-full flex-col justify-between">
+      {/* Top row: Icon on left, Count on right */}
+      <div className="flex items-center justify-between">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-[#0B3B75] transition group-hover:bg-[#0B3B75] group-hover:text-white">
           {icon}
         </div>
 
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center justify-between gap-2">
-            <h4 className="font-bold text-slate-900">{title}</h4>
-
-            {typeof count === "number" && (
-              <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-bold text-[#0B3B75]">
-                {count}
-              </span>
-            )}
-          </div>
-
-          <p className="mt-1 text-sm leading-5 text-slate-500">{description}</p>
-        </div>
+        {typeof count === 'number' && (
+          <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-bold text-[#0B3B75]">
+            {count}
+          </span>
+        )}
       </div>
+
+      {/* Bottom area: Title & Description */}
+      <div className="mt-4 flex flex-1 flex-col justify-start">
+        <h4 className="font-bold text-slate-900 transition group-hover:text-[#0B3B75]">
+          {title}
+        </h4>
+
+        <p className="mt-1 text-xs leading-relaxed text-slate-500">
+          {description}
+        </p>
+      </div>
+    </div>
+  );
+
+  const cardStyle =
+    "group flex h-full w-full flex-col rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md text-left cursor-pointer";
+
+  if (onClick) {
+    return (
+      <button type="button" onClick={onClick} className={cardStyle}>
+        {content}
+      </button>
+    );
+  }
+
+  return (
+    <Link to={href || '#'} className={cardStyle}>
+      {content}
     </Link>
   );
 }

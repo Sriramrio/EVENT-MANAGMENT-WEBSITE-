@@ -109,7 +109,8 @@ public sealed class PaymentReceiptPdfGenerator : IPaymentReceiptPdfGenerator
                 : 0m;
 
         var isTenPercentTds = IsTenPercentTdsBooking(booking.Id, booking.BookingRegistrationNumber);
-        var tdsPercentageLabel = isTenPercentTds ? "10%" : "2%";
+        var effectiveTdsPercentage = payment.TdsPercentage ?? (isTenPercentTds ? 10m : 2m);
+        var tdsPercentageLabel = $"{effectiveTdsPercentage:0.##}%";
 
         // ============================================================
         // COLORS (same green "paid/verified" scheme as the Tax Invoice)
@@ -377,6 +378,14 @@ public sealed class PaymentReceiptPdfGenerator : IPaymentReceiptPdfGenerator
                                                             ? "-"
                                                             : exhibitor.Pan)}")
                                                     .FontSize(7.2f);
+                                                left.Item()
+                                                   .Text(
+                                                       $"GSTIN No. : " +
+                                                       $"{(string.IsNullOrWhiteSpace(
+                                                           exhibitor.Gstin)
+                                                           ? "-"
+                                                           : exhibitor.Gstin)}")
+                                                   .FontSize(7.2f);
                                                 left.Item()
                                                     .Text(
                                                         $"UDYAM No. : " +

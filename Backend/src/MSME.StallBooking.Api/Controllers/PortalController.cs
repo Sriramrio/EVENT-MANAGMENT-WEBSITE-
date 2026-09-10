@@ -33,26 +33,28 @@ public sealed class PortalController : ControllerBase
     private readonly ILogger<PortalController> _logger;
     private readonly IMemoryCache _cache;
     private static readonly HashSet<Guid> SpecialTenPercentTdsBookingIds = new()
-    {
-        Guid.Parse("4ecd38a9-f92f-4adb-91e8-88811e2acddf"),
-        Guid.Parse("e56f2543-0404-4c26-a858-3c694ea142b0"),
-        Guid.Parse("fe3552d8-9ae6-4e34-98b0-b59bd07f5fc4"),
-        Guid.Parse("b9d1751b-b17d-401c-be0b-a8aacc1beacd"),
-        Guid.Parse("3cc38899-cb26-4282-9cf9-9aa5fd04b46f"),
-         Guid.Parse("ebd776e9-c540-41f9-aabb-7c374251c13f")
-    };
+   {
+       Guid.Parse("4ecd38a9-f92f-4adb-91e8-88811e2acddf"),
+       Guid.Parse("e56f2543-0404-4c26-a858-3c694ea142b0"),
+       Guid.Parse("fe3552d8-9ae6-4e34-98b0-b59bd07f5fc4"),
+       Guid.Parse("b9d1751b-b17d-401c-be0b-a8aacc1beacd"),
+       Guid.Parse("3cc38899-cb26-4282-9cf9-9aa5fd04b46f"),
+        Guid.Parse("ebd776e9-c540-41f9-aabb-7c374251c13f"),
+        Guid.Parse("40f09360-8694-4e6a-97ec-ee7c29a0b31f")
+   };
 
 
 
     private static readonly HashSet<string> SpecialTenPercentTdsBookingRegNumbers = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "MSME-HOSUR-20260716-7695",
-        "MSME-HOSUR-20260820-107",
-        "MSME-HOSUR-20260731-043",
-        "MSME-HOSUR-20260829-129",
-        "MSME-HOSUR-20260829-130",
-        "MSME-HOSUR-20260904-157"
-    };
+   {
+       "MSME-HOSUR-20260716-7695",
+       "MSME-HOSUR-20260820-107",
+       "MSME-HOSUR-20260731-043",
+       "MSME-HOSUR-20260829-129",
+       "MSME-HOSUR-20260829-130",
+       "MSME-HOSUR-20260904-157",
+       "MSME-HOSUR-20260907-172"
+   };
     private static bool IsTenPercentTdsBooking(Guid bookingId, string? regNumber) =>
          SpecialTenPercentTdsBookingIds.Contains(bookingId) ||
          bookingId.ToString().Contains("e3552d8", StringComparison.OrdinalIgnoreCase) ||
@@ -873,6 +875,23 @@ public sealed class PortalController : ControllerBase
             .FirstOrDefaultAsync(x => x.BookingId == booking.Id && x.InvoiceStatus != InvoiceStatus.Cancelled, ct)
             ?? throw new DomainRuleException(ErrorCodes.EntityNotFound, "Proforma invoice has not been generated yet.");
 
+        var isSpecialTenPercentTds = IsTenPercentTdsBooking(booking.Id, booking.BookingRegistrationNumber);
+        var latestPaymentForProformaDl = await _db.Payments
+            .Where(x => x.BookingId == booking.Id && x.VerificationStatus == PaymentVerificationStatus.Verified)
+            .OrderByDescending(x => x.VerifiedAt)
+            .FirstOrDefaultAsync(ct);
+
+        var latestTdsApplicable = isSpecialTenPercentTds || (latestPaymentForProformaDl?.isTdsDeductable ?? false);
+        var latestTdsPercentage = latestTdsApplicable
+            ? (decimal?)(latestPaymentForProformaDl?.TdsPercentage ?? (isSpecialTenPercentTds ? 10m : (proformaInvoice.TdsPercentage ?? 2m)))
+            : null;
+
+        if (proformaInvoice.isTdsDeductable != latestTdsApplicable || proformaInvoice.TdsPercentage != latestTdsPercentage)
+        {
+            proformaInvoice.UpdateTdsApplicable(latestTdsApplicable, latestTdsPercentage);
+            await _db.SaveChangesAsync(ct);
+        }
+
         var exhibitor = await GetExhibitorAsync(booking.ExhibitorId, ct);
         var stallForDownload = booking.AllocatedStallId is Guid sid
             ? await _db.Stalls.SingleOrDefaultAsync(x => x.Id == sid, ct)
@@ -1429,35 +1448,42 @@ command.Exhibitor.TanNumber,  // Move TanNumber here (5th)
         ).ToListAsync(ct);
 
         var bookingIds = items.Select(x => x.booking.Id).ToHashSet();
-        var paymentSummary = bookingIds.Count == 0
-            ? new Dictionary<Guid, (decimal TotalPaid, decimal? SponsorTarget)>()
+
+        var paymentRows = bookingIds.Count == 0
+            ? new List<PaymentSummaryItem>()
             : await _db.Payments
                    .AsNoTracking()
-                   .Where(p => p.EventId == evt.Id && p.VerificationStatus == PaymentVerificationStatus.Verified)
-                   .GroupBy(p => p.BookingId)
-                   .Select(g => new
-                   {
-                       BookingId = g.Key,
-                       TotalPaid = g.Sum(p => (decimal?)p.AmountPaid) ?? 0m,
-                       SponsorTarget = g.Where(p => p.TargetSponsorTotal.HasValue && p.TargetSponsorTotal.Value > 0)
-                           .OrderByDescending(p => p.CreatedAt)
-                           .Select(p => (decimal?)p.TargetSponsorTotal)
-                           .FirstOrDefault()
-                   })
-                   .ToDictionaryAsync(x => x.BookingId, x => (x.TotalPaid, x.SponsorTarget), ct);
+                   .Where(p => p.EventId == evt.Id && p.VerificationStatus == PaymentVerificationStatus.Verified && bookingIds.Contains(p.BookingId))
+                   .Select(p => new PaymentSummaryItem(p.BookingId, p.AmountPaid, p.TargetSponsorTotal, p.CreatedAt))
+                   .ToListAsync(ct);
 
-        var proformaSummary = bookingIds.Count == 0
-            ? new Dictionary<Guid, decimal?>()
+        var paymentSummary = paymentRows
+            .GroupBy(p => p.BookingId)
+            .ToDictionary(
+                g => g.Key,
+                g => (
+                    TotalPaid: g.Sum(p => p.AmountPaid),
+                    SponsorTarget: g.Where(p => p.TargetSponsorTotal.HasValue && p.TargetSponsorTotal.Value > 0)
+                                    .OrderByDescending(p => p.CreatedAt)
+                                    .Select(p => p.TargetSponsorTotal)
+                                    .FirstOrDefault()
+                )
+            );
+
+        var proformaRows = bookingIds.Count == 0
+            ? new List<ProformaSummaryItem>()
             : await _db.ProformaInvoices
                    .AsNoTracking()
-                   .Where(pi => pi.EventId == evt.Id && pi.InvoiceStatus != InvoiceStatus.Cancelled)
-                   .GroupBy(pi => pi.BookingId)
-                   .Select(g => new
-                   {
-                       BookingId = g.Key,
-                       LatestTotalAmount = g.OrderByDescending(pi => pi.GeneratedAt).Select(pi => (decimal?)pi.TotalAmount).FirstOrDefault()
-                   })
-                   .ToDictionaryAsync(x => x.BookingId, x => x.LatestTotalAmount, ct);
+                   .Where(pi => pi.EventId == evt.Id && pi.InvoiceStatus != InvoiceStatus.Cancelled && bookingIds.Contains(pi.BookingId))
+                   .Select(pi => new ProformaSummaryItem(pi.BookingId, pi.TotalAmount, pi.GeneratedAt))
+                   .ToListAsync(ct);
+
+        var proformaSummary = proformaRows
+            .GroupBy(pi => pi.BookingId)
+            .ToDictionary(
+                g => g.Key,
+                g => g.OrderByDescending(pi => pi.GeneratedAt).Select(pi => (decimal?)pi.TotalAmount).FirstOrDefault()
+            );
 
         var result = items.Select(x =>
         {
@@ -1744,13 +1770,8 @@ command.Exhibitor.TanNumber,  // Move TanNumber here (5th)
     public async Task<IActionResult> ListStalls(CancellationToken ct)
     {
         var evt = await ResolveCurrentEventAsync(ct);
-        var cacheKey = $"admin_stalls_{evt.Id}";
-        if (_cache.TryGetValue(cacheKey, out object? cached) && cached != null)
-        {
-            return Ok(cached);
-        }
         var items = await _db.Stalls.AsNoTracking().Where(x => x.EventId == evt.Id).OrderBy(x => x.StallNumber).Select(x => new { x.Id, x.TenantId, x.EventId, x.StallSizeId, x.StallNumber, currentStatus = x.CurrentStatus.ToString(), x.CurrentBookingId, x.IsSponsor }).ToListAsync(ct);
-        _cache.Set(cacheKey, items, TimeSpan.FromSeconds(60)); return Ok(items);
+        return Ok(items);
     }
     [HttpPost("admin/events/{eventId:guid}/stalls/{stallId:guid}/mark-sponsor")]
     public async Task<IActionResult> MarkStallAsSponsor(Guid eventId, Guid stallId, CancellationToken ct)
@@ -1872,7 +1893,14 @@ command.Exhibitor.TanNumber,  // Move TanNumber here (5th)
         var blockedStallSize = await _db.StallSizes
                .SingleOrDefaultAsync(
                    x => x.Id == stall.StallSizeId,
-                   ct);
+                   ct)
+               ?? await _db.StallSizes
+                   .SingleOrDefaultAsync(
+                       x => x.Id == booking.RequestedStallSizeId,
+                       ct)
+               ?? throw new DomainRuleException(
+                   ErrorCodes.ValidationFailed,
+                   "Stall size configuration not found for the selected stall or booking.");
 
         decimal baseAmountForBlock;
         decimal gstAmountForBlock;
@@ -1945,12 +1973,16 @@ command.Exhibitor.TanNumber,  // Move TanNumber here (5th)
             "CNRB0000936",
             "Ambattur Branch, Chennai 600053");
 
-        var exhibitorEmail = await GetExhibitorEmailAsync(
-            booking.ExhibitorId,
-            ct);
-        var exhibitor = await GetExhibitorAsync(
-booking.ExhibitorId,
-ct);
+        var exhibitor = await _db.Exhibitors
+            .SingleOrDefaultAsync(x => x.Id == booking.ExhibitorId, ct)
+            ?? throw new DomainRuleException(
+                ErrorCodes.EntityNotFound,
+                "Exhibitor not found for this booking.");
+
+        var exhibitorEmail = string.IsNullOrWhiteSpace(exhibitor.Email)
+            ? "exhibitor@example.com"
+            : exhibitor.Email.Trim();
+
         /*
          * Email also receives the actual blocked-stall size.
          */
@@ -1986,14 +2018,27 @@ ct);
         var billing = await _db.BillingProfiles
             .SingleOrDefaultAsync(
                 x => x.Id == booking.BillingProfileId,
-                ct);
-        //?? throw new DomainRuleException(
-        //    //ErrorCodes.BillingProfileNotFound,
-        //    "Billing profile not found.");
+                ct)
+            ?? await _db.BillingProfiles
+                .FirstOrDefaultAsync(
+                    x => x.ExhibitorId == booking.ExhibitorId,
+                    ct);
 
-        //var exhibitor = await GetExhibitorAsync(
-        //    booking.ExhibitorId,
-        //    ct);
+        var buyerLegalName = !string.IsNullOrWhiteSpace(billing?.BillingLegalName)
+            ? billing.BillingLegalName
+            : (!string.IsNullOrWhiteSpace(exhibitor.LegalName)
+                ? exhibitor.LegalName
+                : (!string.IsNullOrWhiteSpace(exhibitor.TradeName) ? exhibitor.TradeName : "Exhibitor"));
+
+        var buyerAddress = !string.IsNullOrWhiteSpace(billing?.BillingAddress)
+            ? billing.BillingAddress
+            : (!string.IsNullOrWhiteSpace(exhibitor.RegisteredAddress) ? exhibitor.RegisteredAddress : $"{exhibitor.City} {exhibitor.State}".Trim());
+
+        var buyerGstin = billing?.BillingGstin ?? exhibitor.Gstin ?? "";
+        var buyerPan = billing?.BillingPan ?? exhibitor.Pan ?? "";
+        var buyerPlaceOfSupply = !string.IsNullOrWhiteSpace(billing?.PlaceOfSupply)
+            ? billing.PlaceOfSupply
+            : (!string.IsNullOrWhiteSpace(exhibitor.State) ? exhibitor.State : "Tamil Nadu");
 
         /*
          * The invoice snapshot now uses:
@@ -2003,21 +2048,21 @@ ct);
          * 3. The selected stall size's amounts
          */
         var snapshot = new InvoiceSnapshot(
-     "Laghu Udyog Bharati Tamil Nadu",
-     "Plot No 63A, First Floor, 9th Street, " +
-     "Sidco Industrial Estate, Ambattur, Chennai - 600058",
-     "33AAATL0575H1ZT",
-     "AAATL0575H",
+            "Laghu Udyog Bharati Tamil Nadu",
+            "Plot No 63A, First Floor, 9th Street, " +
+            "Sidco Industrial Estate, Ambattur, Chennai - 600058",
+            "33AAATL0575H1ZT",
+            "AAATL0575H",
 
-     billing.BillingLegalName,
-     billing.BillingAddress,
-     billing.BillingGstin,
-     billing.BillingPan,
-     billing.PlaceOfSupply,
+            buyerLegalName,
+            buyerAddress,
+            buyerGstin,
+            buyerPan,
+            buyerPlaceOfSupply,
 
-     stall.StallNumber,
+            stall.StallNumber,
 
- blockedStallSize.DisplayName,
+            blockedStallSize.DisplayName,
 
  baseAmountForBlock,
  blockedStallSize.GstPercentage,
@@ -2039,7 +2084,8 @@ ct);
      "CNRB0000936",
      "Ambattur Branch, Chennai 600053",
       stall.IsSponsor ? "HSN 998397" : "HSN 998596",
-      request.IsTdsDeductable);   // NEW: TDS flag now reaches the proforma invoice
+      request.IsTdsDeductable,
+      request.IsTdsDeductable ? (request.TdsPercentage ?? 2m) : null);
 
 
         var proformaInvoice = await _db.ProformaInvoices
@@ -2217,11 +2263,17 @@ ct);
         // already-net AmountPaid — matches GetAllBookingPaymentSummaries logic.
         var isSpecialTenPercentTds = IsTenPercentTdsBooking(booking.Id, booking.BookingRegistrationNumber);
 
-        var isTdsDeducted = isSpecialTenPercentTds || await _db.Payments
+        var verifiedPaymentsForTds = await _db.Payments
             .Where(x => x.BookingId == booking.Id && x.VerificationStatus == PaymentVerificationStatus.Verified)
-            .AnyAsync(x => x.isTdsDeductable, ct);
+            .ToListAsync(ct);
 
-        var tdsRate = isSpecialTenPercentTds ? 0.10m : 0.02m;
+        var isTdsDeducted = isSpecialTenPercentTds || verifiedPaymentsForTds.Any(x => x.isTdsDeductable);
+
+        var dynamicTdsPercentage = payment.TdsPercentage 
+            ?? verifiedPaymentsForTds.FirstOrDefault(x => x.isTdsDeductable)?.TdsPercentage 
+            ?? (isSpecialTenPercentTds ? 10m : 2m);
+
+        var tdsRate = dynamicTdsPercentage / 100m;
         var tdsBaseAmount = stall.IsSponsor ? expectedTotal : size.BaseAmount;
 
         var totalTdsAmount = isTdsDeducted
@@ -2443,7 +2495,6 @@ ct);
 
         return Ok(response);
     }
-
     [HttpPost("admin/events/current/bookings/{bookingId:guid}/payments")]
     public async Task<IActionResult> SubmitAndVerifyPayment(Guid bookingId, [FromBody] PaymentApiRequest request, CancellationToken ct)
     {
@@ -2451,15 +2502,14 @@ ct);
         var booking = await _db.StallBookings.SingleOrDefaultAsync(x => x.Id == bookingId, ct)
             ?? throw new DomainRuleException(ErrorCodes.BookingNotFound, "Booking not found.");
         var allocation = await _db.StallAllocations
-
-            .Where(x => x.BookingId == booking.Id && x.AllocationStatus == AllocationStatus.Blocked)
+            .Where(x => x.BookingId == booking.Id && (x.AllocationStatus == AllocationStatus.Blocked || x.AllocationStatus == AllocationStatus.Frozen))
             .OrderByDescending(x => x.BlockedAt)
             .FirstOrDefaultAsync(ct)
-            ?? throw new DomainRuleException(ErrorCodes.ValidationFailed, "No active blocked allocation found.");
+            ?? throw new DomainRuleException(ErrorCodes.ValidationFailed, "No active allocation found.");
         var stall = await _db.Stalls.SingleAsync(x => x.Id == allocation.StallId, ct);
         var size = await _db.StallSizes.SingleAsync(x => x.Id == booking.RequestedStallSizeId, ct);
         var isSponsorStall = stall.IsSponsor;
-        if (allocation.BlockExpiresAt < DateTimeOffset.UtcNow && !request.OverrideExpiredBlock)
+        if (allocation.AllocationStatus == AllocationStatus.Blocked && allocation.BlockExpiresAt < DateTimeOffset.UtcNow && !request.OverrideExpiredBlock)
             throw new DomainRuleException(ErrorCodes.BlockExpired, "Block has expired. Override is required.");
 
         if (request.AmountPaid <= 0)
@@ -2506,7 +2556,11 @@ ct);
         var totalPaidAfterThis = previouslyVerifiedAmount + request.AmountPaid;
 
         var isSpecialTenPercentTds = IsTenPercentTdsBooking(booking.Id, booking.BookingRegistrationNumber);
-        var tdsRate = isSpecialTenPercentTds ? 0.10m : 0.02m;
+        var existingVerifiedTdsPercentage = verifiedPayments.FirstOrDefault(x => x.isTdsDeductable)?.TdsPercentage;
+        var dynamicTdsPercentage = (request.isTdsDeductable && request.tdsPercentage.HasValue && request.tdsPercentage.Value > 0)
+            ? request.tdsPercentage.Value
+            : (existingVerifiedTdsPercentage ?? (isSpecialTenPercentTds ? 10m : 2m));
+        var tdsRate = dynamicTdsPercentage / 100m;
         var isTdsApplicable = isSpecialTenPercentTds || request.isTdsDeductable || verifiedPayments.Any(x => x.isTdsDeductable);
         var tdsBaseAmount = isSponsorStall ? expectedTotal : size.BaseAmount;
         var totalTdsAmount = isTdsApplicable ? Math.Round(tdsBaseAmount * tdsRate, 2) : 0m;
@@ -2524,13 +2578,6 @@ ct);
         else
         {
             targetSettlementAmount = expectedTotal;
-        }
-
-        if (!isSponsorStall && totalPaidAfterThis > expectedTotal)
-        {
-            throw new DomainRuleException(
-                ErrorCodes.PaymentAmountMismatch,
-                $"Total amount paid (₹{totalPaidAfterThis:N2}) would exceed expected amount (₹{expectedTotal:N2}).");
         }
 
         var isFullSettlement = totalPaidAfterThis >= targetSettlementAmount;
@@ -2552,6 +2599,7 @@ ct);
               request.PaymentDate,
               null,
               request.isTdsDeductable,
+              request.isTdsDeductable ? dynamicTdsPercentage : null,
               request.isGstApplicable,
               request.gstType,
               request.gstAmount,
@@ -2588,37 +2636,62 @@ ct);
             request.ActorUserId,
             expectedTotal,
             receiptNo,
-               isPartialPayment,
-    request.isTdsDeductable);
+            isPartialPayment,
+            request.isTdsDeductable,
+            request.isTdsDeductable ? dynamicTdsPercentage : null);
 
         if (isFullSettlement)
         {
-            booking.ConfirmPaymentAndFreeze();
-            stall.Freeze(booking.Id);
-            allocation.Freeze(request.ActorUserId);
+            if (booking.BookingStatus != BookingStatus.Confirmed)
+            {
+                booking.ConfirmPaymentAndFreeze();
+            }
+            if (stall.CurrentStatus != StallStatus.Frozen)
+            {
+                stall.Freeze(booking.Id);
+            }
+            if (allocation.AllocationStatus != AllocationStatus.Frozen)
+            {
+                allocation.Freeze(request.ActorUserId);
+            }
         }
         else
         {
-            // Partial payment: booking stays visible in the payment queue,
-            // stall/allocation remain Blocked (not frozen).
-            booking.MarkPaymentSubmitted();
+            if (booking.BookingStatus != BookingStatus.Confirmed)
+            {
+                // Partial payment: booking stays visible in the payment queue,
+                // stall/allocation remain Blocked (not frozen).
+                booking.MarkPaymentSubmitted();
+            }
         }
 
         await _db.Payments.AddAsync(payment, ct);
 
+        var existingInvoiceForPayment = await _db.ProformaInvoices
+            .FirstOrDefaultAsync(x => x.BookingId == booking.Id && x.InvoiceStatus != InvoiceStatus.Cancelled, ct);
+        if (existingInvoiceForPayment != null)
+        {
+            existingInvoiceForPayment.UpdateTdsApplicable(
+                request.isTdsDeductable,
+                request.isTdsDeductable ? dynamicTdsPercentage : null);
+        }
+
+        var isExtraPayment = totalPaidAfterThis > targetSettlementAmount;
         await _db.AuditLogs.AddAsync(
             Audit(evt.TenantId, evt.Id, request.ActorUserId,
             "Payment", payment.Id,
-            isFullSettlement ? "Payment verified and stall frozen" : "Part payment verified",
+            isExtraPayment ? "Extra payment verified" : (isFullSettlement ? "Payment verified and stall frozen" : "Part payment verified"),
             null,
             new
             {
                 request.PaymentReferenceNumber,
                 request.AmountPaid,
                 isPartialPayment,
+                isExtraPayment,
                 totalPaidAfterThis,
                 expectedTotal,
-                balanceRemaining = expectedTotal - totalPaidAfterThis
+                balanceRemaining = Math.Max(0m, expectedTotal - totalPaidAfterThis),
+                extraAmount = Math.Max(0m, totalPaidAfterThis - targetSettlementAmount)
             }), ct);
 
         await _db.SaveChangesAsync(ct);
@@ -2698,7 +2771,8 @@ ct);
             totalPaid = totalPaidAfterThis,
             expectedAmount = expectedTotal,
             balanceRemaining = expectedTotal - totalPaidAfterThis,
-            isTdsDeductable = request.isTdsDeductable
+            isTdsDeductable = request.isTdsDeductable,
+            tdsPercentage = request.isTdsDeductable ? dynamicTdsPercentage : (decimal?)null
         });
     }
     // ============================================================================
@@ -2771,6 +2845,7 @@ ct);
                 PaymentCount = g.Count(),
 
                 IsTdsDeducted = g.Any(x => x.isTdsDeductable),
+                TdsPercentage = g.Where(x => x.isTdsDeductable && x.TdsPercentage.HasValue).Select(x => (decimal?)x.TdsPercentage).FirstOrDefault(),
 
                 // NEW: GST applicability now comes from Payments, not StallSizes.
                 // If ANY verified payment for this booking says GST applies, treat it as applicable.
@@ -2811,10 +2886,14 @@ ct);
 
                 // 2. TDS Calculation
                 var isSpecialTenPercentTds = IsTenPercentTdsBooking(b.BookingId, b.BookingRegistrationNumber);
-                var tdsRate = isSpecialTenPercentTds ? 0.10m : 0.02m;
+                decimal effectiveTdsPercentage = paymentInfo.TdsPercentage 
+                    ?? (isSpecialTenPercentTds ? 10m : 2m);
+                var tdsRate = effectiveTdsPercentage / 100m;
                 var hasTdsDeducted = isSpecialTenPercentTds || isTdsDeducted;
 
-                decimal tdsBase = isSponsor ? expectedTotal : b.BaseAmount;
+                decimal tdsBase = isSponsor
+                    ? Math.Round(expectedTotal / (1 + (b.GstPercentage / 100m)), 2)
+                    : b.BaseAmount;
                 decimal calculatedTds = Math.Round(tdsBase * tdsRate, 2);
 
                 // 3. Net Bank Receivable
@@ -2836,8 +2915,7 @@ ct);
 
                     if (hasTdsDeducted)
                     {
-                        decimal tds = Math.Round(netBankReceivable * tdsRate, 2);
-                        netBankReceivable -= tds;
+                        netBankReceivable -= calculatedTds;
                     }
                 }
                 else
@@ -2856,6 +2934,11 @@ ct);
                 }
 
                 decimal balanceRemaining = Math.Max(0m, netBankReceivable - totalBankPaid);
+                decimal maxStallExpected = isSponsor ? targetSponsorAmount!.Value : Math.Max(b.ExpectedTotal, expectedTotal);
+                decimal excessAmount = totalBankPaid > maxStallExpected
+                    ? Math.Max(0m, totalBankPaid - maxStallExpected)
+                    : 0m;
+                bool hasExcessPayment = excessAmount > 0;
                 bool isFullySettled = totalBankPaid >= netBankReceivable;
                 var stallId = latestStallByBooking.TryGetValue(b.BookingId, out var sid) ? sid : null;
                 var stallNumber = stallId.HasValue && stallNumbersById.TryGetValue(stallId.Value, out var num) ? num
@@ -2883,6 +2966,7 @@ ct);
 
                     // TDS & Net Amounts
                     isTdsDeducted = hasTdsDeducted,
+                    tdsPercentage = hasTdsDeducted ? effectiveTdsPercentage : 0m,
                     tdsDeductionAmount = hasTdsDeducted ? calculatedTds : 0m,
                     netBankReceivableAfterTds = netBankReceivable,
 
@@ -2891,9 +2975,11 @@ ct);
                     {
                         totalBankPaid,
                         balanceRemaining,
+                        excessAmount,
+                        hasExcessPayment,
                         isFullySettled,
                         paymentCount,
-                        paymentStatus = isFullySettled ? "Full Paid" : "Part Paid"
+                        paymentStatus = hasExcessPayment ? "Excess Paid" : (isFullySettled ? "Full Paid" : "Part Paid")
                     }
                 };
             })
@@ -2908,10 +2994,13 @@ ct);
                 totalTdsDeductions = summaries.Sum(x => x.tdsDeductionAmount),
                 totalNetReceivables = summaries.Sum(x => x.netBankReceivableAfterTds),
                 totalBankReceived = summaries.Sum(x => x.summary.totalBankPaid),
-                totalOutstandingBalance = summaries.Sum(x => x.summary.balanceRemaining)
+                totalOutstandingBalance = summaries.Sum(x => x.summary.balanceRemaining),
+                totalExcessPaid = summaries.Sum(x => x.summary.excessAmount),
+                totalExcessPaymentsCount = summaries.Count(x => x.summary.hasExcessPayment)
             },
-            totalFullySettled = summaries.Count(x => x.summary.isFullySettled),
+            totalFullySettled = summaries.Count(x => x.summary.isFullySettled && !x.summary.hasExcessPayment),
             totalPendingSettlement = summaries.Count(x => !x.summary.isFullySettled),
+            totalExcessSettlement = summaries.Count(x => x.summary.hasExcessPayment),
             data = summaries
         };
 
@@ -3215,13 +3304,43 @@ ct);
     public async Task<IActionResult> ListInvoices(CancellationToken ct)
     {
         var evt = await ResolveCurrentEventAsync(ct);
-        var cacheKey = $"admin_invoices_{evt.Id}";
-        if (_cache.TryGetValue(cacheKey, out object? cached) && cached != null)
+        var data = await _db.ProformaInvoices
+            .Where(x => x.EventId == evt.Id)
+            .OrderByDescending(x => x.GeneratedAt)
+            .ToListAsync(ct);
+
+        var bookingIds = data.Select(x => x.BookingId).Distinct().ToList();
+        var verifiedPayments = await _db.Payments.AsNoTracking()
+            .Where(x => bookingIds.Contains(x.BookingId) && x.VerificationStatus == PaymentVerificationStatus.Verified)
+            .OrderByDescending(x => x.VerifiedAt)
+            .ToListAsync(ct);
+
+        var latestPaymentByBooking = verifiedPayments
+            .GroupBy(x => x.BookingId)
+            .ToDictionary(g => g.Key, g => g.First());
+
+        bool anyChanged = false;
+        foreach (var inv in data)
         {
-            return Ok(cached);
+            if (latestPaymentByBooking.TryGetValue(inv.BookingId, out var payment))
+            {
+                var isSpecial = IsTenPercentTdsBooking(inv.BookingId, null);
+                var paymentHasTds = payment.isTdsDeductable || isSpecial;
+                var paymentTdsPct = paymentHasTds ? (payment.TdsPercentage ?? (isSpecial ? 10m : 2m)) : (decimal?)null;
+
+                if (inv.isTdsDeductable != paymentHasTds || inv.TdsPercentage != paymentTdsPct)
+                {
+                    inv.UpdateTdsApplicable(paymentHasTds, paymentTdsPct);
+                    anyChanged = true;
+                }
+            }
         }
-        var data = await _db.ProformaInvoices.AsNoTracking().Where(x => x.EventId == evt.Id).OrderByDescending(x => x.GeneratedAt).ToListAsync(ct);
-        _cache.Set(cacheKey, data, TimeSpan.FromSeconds(30));
+
+        if (anyChanged)
+        {
+            await _db.SaveChangesAsync(ct);
+        }
+
         return Ok(data);
     }
 
@@ -3249,11 +3368,12 @@ ct);
                 // Pull the latest TDS decision from the verified payment —
                 // this invoice may have been auto-created before payment was
                 // verified, when TDS was not yet known (always false then).
-                var latestTdsApplicable = await _db.Payments
+                var latestPaymentForRefresh = await _db.Payments
                     .Where(x => x.BookingId == bookingId && x.VerificationStatus == PaymentVerificationStatus.Verified)
                     .OrderByDescending(x => x.VerifiedAt)
-                    .Select(x => x.isTdsDeductable)
                     .FirstOrDefaultAsync(ct);
+                var latestTdsApplicable = latestPaymentForRefresh?.isTdsDeductable ?? false;
+                var latestTdsPercentage = latestPaymentForRefresh?.TdsPercentage;
 
                 if (bookingForRefresh.AllocatedStallId is Guid allocatedStallId)
                 {
@@ -3288,9 +3408,11 @@ ct);
                             .Select(x => x.TargetSponsorTotal!.Value)
                             .FirstOrDefaultAsync(ct);
 
-                        totalAmountForRefresh = sponsorTargetForRefresh > 0
+                        var sponsorTotal = sponsorTargetForRefresh > 0
                             ? sponsorTargetForRefresh
-                            : existing.TotalAmount;
+                            : sizeForRefresh.TotalAmount;
+
+                        totalAmountForRefresh = sponsorTotal;
                         baseAmountForRefresh = Math.Round(
                             totalAmountForRefresh / (1 + (sizeForRefresh.GstPercentage / 100m)), 2);
                         gstAmountForRefresh = totalAmountForRefresh - baseAmountForRefresh;
@@ -3303,8 +3425,9 @@ ct);
                     }
 
                     var amountMismatch = existing.TotalAmount != totalAmountForRefresh;
+                    var tdsPercentageMismatch = existing.TdsPercentage != latestTdsPercentage;
 
-                    if (existing.isTdsDeductable != latestTdsApplicable || existing.HsnSac != expectedHsn || amountMismatch)
+                    if (existing.isTdsDeductable != latestTdsApplicable || tdsPercentageMismatch || existing.HsnSac != expectedHsn || amountMismatch)
                     {
                         var refreshSnapshot = new InvoiceSnapshot(
                             "Laghu Udyog Bharati Tamil Nadu",
@@ -3329,7 +3452,8 @@ NumberToWordsConverter.Convert(gstAmountForRefresh),
                             "CNRB0000936",
                             "Ambattur Branch, Chennai 600053",
                             expectedHsn,
-                            latestTdsApplicable);
+                            latestTdsApplicable,
+                            latestTdsPercentage);
 
                         existing.UpdateStallDetails(refreshSnapshot, request.ActorUserId);
                         await _db.SaveChangesAsync(ct);
@@ -3360,11 +3484,12 @@ NumberToWordsConverter.Convert(gstAmountForRefresh),
 
         var size = await _db.StallSizes
             .SingleAsync(x => x.Id == booking.RequestedStallSizeId, ct);
-        var tdsApplicable = await _db.Payments
-    .Where(x => x.BookingId == booking.Id && x.VerificationStatus == PaymentVerificationStatus.Verified)
-    .OrderByDescending(x => x.VerifiedAt)
-    .Select(x => x.isTdsDeductable)
-    .FirstOrDefaultAsync(ct);
+        var latestPaymentForInvoice = await _db.Payments
+            .Where(x => x.BookingId == booking.Id && x.VerificationStatus == PaymentVerificationStatus.Verified)
+            .OrderByDescending(x => x.VerifiedAt)
+            .FirstOrDefaultAsync(ct);
+        var tdsApplicable = latestPaymentForInvoice?.isTdsDeductable ?? false;
+        var tdsPercentage = latestPaymentForInvoice?.TdsPercentage;
 
         var invoiceNo = await NextNumberAsync(
             evt.TenantId,
@@ -3399,10 +3524,10 @@ NumberToWordsConverter.Convert(gstAmountForRefresh),
                 .Select(x => x.TargetSponsorTotal!.Value)
                 .FirstOrDefaultAsync(ct);
 
-            var targetAmount = sponsorTarget > 0 ? sponsorTarget : size.BaseAmount;
-            baseAmount = targetAmount;
-            gstAmount = Math.Round(baseAmount * (size.GstPercentage / 100m), 2);
-            totalAmount = baseAmount + gstAmount;
+            var sponsorTotal = sponsorTarget > 0 ? sponsorTarget : size.TotalAmount;
+            totalAmount = sponsorTotal;
+            baseAmount = Math.Round(totalAmount / (1 + (size.GstPercentage / 100m)), 2);
+            gstAmount = totalAmount - baseAmount;
         }
         else
         {
@@ -3433,7 +3558,8 @@ NumberToWordsConverter.Convert(gstAmount),
             "CNRB0000936",
             "Ambattur Branch, Chennai 600053",
               stall.IsSponsor ? "HSN 998397" : "HSN 998596",
-    tdsApplicable);
+    tdsApplicable,
+    tdsPercentage);
 
 
         var invoice = ProformaInvoice.Generate(
@@ -3449,6 +3575,7 @@ NumberToWordsConverter.Convert(gstAmount),
 
         return Ok(invoice);
     }
+
 
     [HttpPost("admin/events/current/invoices/{invoiceId:guid}/send-email")]
     public async Task<IActionResult> SendInvoice(
@@ -3477,10 +3604,10 @@ NumberToWordsConverter.Convert(gstAmount),
             ? "Exhibitor"
             : exhibitor.ContactPersonName.Trim();
 
-        var companyName = !string.IsNullOrWhiteSpace(exhibitor.TradeName)
-            ? exhibitor.TradeName.Trim()
-            : !string.IsNullOrWhiteSpace(exhibitor.LegalName)
-                ? exhibitor.LegalName.Trim()
+        var companyName = !string.IsNullOrWhiteSpace(exhibitor.LegalName)
+            ? exhibitor.LegalName.Trim()
+            : !string.IsNullOrWhiteSpace(exhibitor.TradeName)
+                ? exhibitor.TradeName.Trim()
                 : "Your Company";
 
         var isSpecialTenPercentTds = IsTenPercentTdsBooking(booking.Id, booking.BookingRegistrationNumber);
@@ -3489,10 +3616,13 @@ NumberToWordsConverter.Convert(gstAmount),
         var latestVerifiedPayment = await _db.Payments
             .Where(x => x.BookingId == invoice.BookingId && x.VerificationStatus == PaymentVerificationStatus.Verified)
             .OrderByDescending(x => x.VerifiedAt)
-            .Select(x => new { x.isTdsDeductable, x.gstType })
+            .Select(x => new { x.isTdsDeductable, x.gstType, x.TdsPercentage })
             .FirstOrDefaultAsync(ct);
 
         var latestTdsApplicable = isSpecialTenPercentTds || (latestVerifiedPayment?.isTdsDeductable ?? false);
+        var latestTdsPercentage = latestTdsApplicable
+            ? (decimal?)(latestVerifiedPayment?.TdsPercentage ?? (isSpecialTenPercentTds ? 10m : (invoice.TdsPercentage ?? 2m)))
+            : null;
         var latestGstTypeForSend = latestVerifiedPayment?.gstType ?? "Normal";
 
         // RCM = Reverse Charge Mechanism: supplier does not charge GST on the invoice
@@ -3506,38 +3636,28 @@ NumberToWordsConverter.Convert(gstAmount),
         decimal baseAmountForSend;
         decimal gstAmountForSend;
 
-        var tdsGrossUpDivisor = isSpecialTenPercentTds ? 0.90m : 0.98m;
-
         if (stallForSend.IsSponsor)
         {
-            // Sum of ALL verified payments for this sponsor booking
-            var rawVerifiedPaid = await _db.Payments
-                .Where(x => x.BookingId == invoice.BookingId && x.VerificationStatus == PaymentVerificationStatus.Verified)
-                .SumAsync(x => x.AmountPaid, ct);
+            var sponsorTargetForSend = await _db.Payments
+                .Where(x => x.BookingId == invoice.BookingId &&
+                            x.VerificationStatus == PaymentVerificationStatus.Verified &&
+                            x.TargetSponsorTotal.HasValue &&
+                            x.TargetSponsorTotal.Value > 0)
+                .OrderByDescending(x => x.VerifiedAt)
+                .Select(x => x.TargetSponsorTotal!.Value)
+                .FirstOrDefaultAsync(ct);
+
+            var sponsorTotal = sponsorTargetForSend > 0 ? sponsorTargetForSend : sizeForSend.TotalAmount;
 
             if (isRcmForSend)
             {
-                // RCM SPONSOR LOGIC:
-                // 1. Deduct/less 18% GST from the target sponsor amount (rawVerifiedPaid)
-                var sponsorBaseAmountExcludingGst = Math.Round(rawVerifiedPaid / 1.18m, 2);
-
-                // 2. Gross up for TDS if applicable (based on the net base amount)
-                var finalSponsorBaseAmount = latestTdsApplicable
-                    ? Math.Round(sponsorBaseAmountExcludingGst / tdsGrossUpDivisor, 2)
-                    : sponsorBaseAmountExcludingGst;
-
-                // 3. For RCM, Supplier GST is 0, so Total Amount equals the reduced Base Amount
-                baseAmountForSend = finalSponsorBaseAmount;
+                baseAmountForSend = Math.Round(sponsorTotal / (1 + (sizeForSend.GstPercentage / 100m)), 2);
                 gstAmountForSend = 0m;
-                totalAmountForSend = finalSponsorBaseAmount;
+                totalAmountForSend = baseAmountForSend;
             }
             else
             {
-                var grossAmountForSend = latestTdsApplicable
-                    ? Math.Round(rawVerifiedPaid / tdsGrossUpDivisor, 2)
-                    : rawVerifiedPaid;
-
-                totalAmountForSend = grossAmountForSend;
+                totalAmountForSend = sponsorTotal;
                 baseAmountForSend = Math.Round(totalAmountForSend / (1 + (sizeForSend.GstPercentage / 100m)), 2);
                 gstAmountForSend = totalAmountForSend - baseAmountForSend;
             }
@@ -3562,8 +3682,10 @@ NumberToWordsConverter.Convert(gstAmount),
 
         // Force snapshot refresh if RCM is active but the stored invoice still has GST > 0 or base amount mismatch
         var isGstMismatchForRcm = isRcmForSend && invoice.GstAmount > 0m;
+        var tdsPercentageMismatch = invoice.TdsPercentage != latestTdsPercentage;
 
         if (invoice.isTdsDeductable != latestTdsApplicable
+            || tdsPercentageMismatch
             || invoice.HsnSac != expectedHsnForSend
             || invoice.BaseAmount != baseAmountForSend
             || isGstMismatchForRcm
@@ -3594,10 +3716,18 @@ NumberToWordsConverter.Convert(gstAmount),
                 "CNRB0000936",
                 "Ambattur Branch, Chennai 600053",
                 expectedHsnForSend,
-                latestTdsApplicable
+                latestTdsApplicable,
+                latestTdsPercentage
             );
 
             invoice.UpdateStallDetails(refreshSnapshotForSend, request.ActorUserId);
+            invoice.UpdateTdsApplicable(latestTdsApplicable, latestTdsPercentage);
+            await _db.SaveChangesAsync(ct);
+        }
+
+        if (invoice.isTdsDeductable != latestTdsApplicable || invoice.TdsPercentage != latestTdsPercentage)
+        {
+            invoice.UpdateTdsApplicable(latestTdsApplicable, latestTdsPercentage);
             await _db.SaveChangesAsync(ct);
         }
 
@@ -3694,6 +3824,7 @@ NumberToWordsConverter.Convert(gstAmount),
         });
     }
 
+
     [HttpGet("admin/events/current/bookings/{bookingId:guid}/tax-invoice/download")]
     public async Task<IActionResult> DownloadTaxInvoice(
         Guid bookingId,
@@ -3714,6 +3845,23 @@ NumberToWordsConverter.Convert(gstAmount),
             throw new DomainRuleException(
                 ErrorCodes.ValidationFailed,
                 "Tax invoice has not been generated/sent yet.");
+        }
+
+        var isSpecialTenPercentTds = IsTenPercentTdsBooking(booking.Id, booking.BookingRegistrationNumber);
+        var latestPaymentForTaxDl = await _db.Payments
+            .Where(x => x.BookingId == booking.Id && x.VerificationStatus == PaymentVerificationStatus.Verified)
+            .OrderByDescending(x => x.VerifiedAt)
+            .FirstOrDefaultAsync(ct);
+
+        var latestTdsApplicable = isSpecialTenPercentTds || (latestPaymentForTaxDl?.isTdsDeductable ?? false);
+        var latestTdsPercentage = latestTdsApplicable
+            ? (decimal?)(latestPaymentForTaxDl?.TdsPercentage ?? (isSpecialTenPercentTds ? 10m : (invoice.TdsPercentage ?? 2m)))
+            : null;
+
+        if (invoice.isTdsDeductable != latestTdsApplicable || invoice.TdsPercentage != latestTdsPercentage)
+        {
+            invoice.UpdateTdsApplicable(latestTdsApplicable, latestTdsPercentage);
+            await _db.SaveChangesAsync(ct);
         }
 
         var exhibitor = await GetExhibitorAsync(booking.ExhibitorId, ct);
@@ -3921,7 +4069,7 @@ NumberToWordsConverter.Convert(gstAmount),
                 booking,
                 exhibitor.Email,
                 exhibitor.ContactPersonName ?? "Exhibitor",
-                exhibitor.TradeName ?? exhibitor.LegalName ?? "Company",
+            exhibitor.LegalName ?? exhibitor.TradeName ?? "Company",
                 stall?.StallNumber ?? "TBA",
                 size?.DisplayName ?? "TBA");
 
@@ -3986,7 +4134,7 @@ NumberToWordsConverter.Convert(gstAmount),
             booking,
             exhibitor.Email,
             exhibitor.ContactPersonName ?? "Exhibitor",
-            exhibitor.TradeName ?? exhibitor.LegalName ?? "Company",
+                exhibitor.LegalName ?? exhibitor.TradeName ?? "Company",
             stall?.StallNumber ?? "TBA",
             size?.DisplayName ?? "TBA");
 
@@ -4047,7 +4195,7 @@ NumberToWordsConverter.Convert(gstAmount),
                 booking,
                 exhibitor.Email,
                 exhibitor.ContactPersonName ?? "Exhibitor",
-                exhibitor.TradeName ?? exhibitor.LegalName ?? "Company");
+                exhibitor.LegalName ?? exhibitor.TradeName ?? "Company");
 
             await _db.EmailLogs.AddAsync(email, ct);
             newEmails.Add(email);
@@ -4287,8 +4435,9 @@ NumberToWordsConverter.Convert(gstAmount),
             .Select(g => new { Status = g.Key, Count = g.Count() })
             .ToListAsync(ct);
 
-        var paymentVerifiedCount = await _db.Payments.AsNoTracking()
-            .CountAsync(x => x.EventId == evt.Id && x.VerificationStatus == PaymentVerificationStatus.Verified, ct);
+        var paymentVerifiedCount = bookingCounts
+            .Where(x => x.Status == BookingStatus.PaymentSubmitted || x.Status == BookingStatus.PaymentVerified)
+            .Sum(x => x.Count);
 
         var invoiceCounts = await _db.ProformaInvoices.AsNoTracking()
             .Where(x => x.EventId == evt.Id)
@@ -4703,7 +4852,8 @@ public sealed record BlockStallApiRequest(
     Guid ActorUserId,
     decimal? TargetSponsorTotal = null,
     bool IsGstApplicable = true,
-    bool IsTdsDeductable = false);
+    bool IsTdsDeductable = false,
+    decimal? TdsPercentage = null);
 public sealed record PaymentApiRequest(
     Guid ActorUserId,
     string PaymentReferenceNumber,
@@ -4713,8 +4863,9 @@ public sealed record PaymentApiRequest(
     DateOnly PaymentDate,
     string? Remarks,
     bool OverrideExpiredBlock = false,
-     bool isTdsDeductable = false,
-        bool isGstApplicable = false,
+    bool isTdsDeductable = false,
+    decimal? tdsPercentage = null,
+    bool isGstApplicable = false,
     string? gstType = null,
     string? gstAmount = null,
     decimal? TargetSponsorTotal = null
@@ -4867,3 +5018,6 @@ public sealed record BulkExtendBlockApiRequest(
    Guid ActorUserId,
    List<Guid> BookingIds,
    DateTimeOffset NewExpiryAt);
+
+public sealed record PaymentSummaryItem(Guid BookingId, decimal AmountPaid, decimal? TargetSponsorTotal, DateTimeOffset CreatedAt);
+public sealed record ProformaSummaryItem(Guid BookingId, decimal TotalAmount, DateTimeOffset GeneratedAt);

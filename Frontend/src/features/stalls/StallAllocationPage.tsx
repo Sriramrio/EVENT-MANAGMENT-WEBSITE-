@@ -271,7 +271,8 @@ export function StallAllocationPage() {
     stallId: string,
     targetSponsorTotal?: number,
     isGstApplicable?: boolean,
-    isTdsDeductable?: boolean
+    isTdsDeductable?: boolean,
+    tdsPercentage?: number
   ) {
     setMessage('');
 
@@ -286,7 +287,8 @@ export function StallAllocationPage() {
         user.id,
         targetSponsorTotal,
         isGstApplicable,
-        isTdsDeductable
+        isTdsDeductable,
+        tdsPercentage
       );
 
       setMessage(
@@ -318,14 +320,15 @@ export function StallAllocationPage() {
   async function handleSponsorTargetConfirm(
     targetAmount: number,
     isGstApplicable: boolean,
-    isTdsDeductable: boolean
+    isTdsDeductable: boolean,
+    tdsPercentage?: number
   ) {
     if (!sponsorDialogStall) return;
 
     const stallId = sponsorDialogStall.id;
     setSponsorDialogStall(null);
 
-    await block(stallId, targetAmount, isGstApplicable, isTdsDeductable);
+    await block(stallId, targetAmount, isGstApplicable, isTdsDeductable, tdsPercentage);
   }
 
   return (

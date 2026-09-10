@@ -148,6 +148,7 @@ import { ExhibitorInterestsPage } from "../features/ExhibitorPortal/ExhibitorInt
 import { ExhibitorStallQrPage } from "../features/ExhibitorPortal/ExhibitorStallQrPage";
 import { ExhibitorECardPage } from "../features/ExhibitorPortal/ExhibitorECardPage";
 import { ExhibitorSendEmailPage } from "../features/ExhibitorPortal/ExhibitorSendEmailPage";
+import { ExhibitorEmailLogsPage } from "../features/ExhibitorPortal/ExhibitorEmailLogsPage";
 import { VisitorAuthGuard } from "./guards/VisitorAuthGuard";
 import VisitorPassPage from "../features/public/VisitorPassPage";
 import { VisitorScannerPage } from "../features/public/VisitorScannerPage";
@@ -160,27 +161,29 @@ import { ExhibitorConnectionsPage } from "../features/ExhibitorPortal/ExhibitorC
 import { ExhibitorRequirementsPage } from "../features/admin/pages/ExhibitorRequirementsPage";
 import { useSession } from "./session";
 import AdminExhibitorListPage from "../features/admin/pages/AdminExhibitorListPage";
+import LogoManagerPage from "../features/admin/pages/LogoManagerPage";
+
 const TENANTID = "11111111-1111-1111-1111-111111111111";
 const EVENTID = "22222222-2222-2222-2222-222222222222";
 
 function AdminIndexRedirect() {
   const user = useSession((state) => state.user);
-  if (user?.roleCode === 'BuyerAdmin') {
+  if (user?.roleCode === "BuyerAdmin") {
     return <Navigate to="/app/admin/buyers" replace />;
   }
-  if (user?.roleCode === 'SellerAdmin') {
+  if (user?.roleCode === "SellerAdmin") {
     return <Navigate to="/app/admin/sellers" replace />;
   }
-  if (user?.roleCode === 'ExhibitorAdmin') {
+  if (user?.roleCode === "ExhibitorAdmin") {
     return <Navigate to="/app/admin/exhibitor-requirements" replace />;
   }
-  if (user?.roleCode === 'StallAllocationAdmin') {
+  if (user?.roleCode === "StallAllocationAdmin") {
     return <Navigate to="/app/stall-allocation" replace />;
   }
-  if (user?.roleCode === 'PaymentVerifier') {
+  if (user?.roleCode === "PaymentVerifier") {
     return <Navigate to="/app/payments" replace />;
   }
-  if (user?.roleCode === 'ProformaInvoicePreparer') {
+  if (user?.roleCode === "ProformaInvoicePreparer") {
     return <Navigate to="/app/invoices" replace />;
   }
   return <Navigate to="/app/dashboard" replace />;
@@ -846,7 +849,10 @@ export const router = createBrowserRouter([
         ),
       },
       { path: "capabilities", element: <CapabilitiesPage /> },
-      { path: "capabilities/new", element: <Navigate to="/seller/capabilities/new/basic" replace /> },
+      {
+        path: "capabilities/new",
+        element: <Navigate to="/seller/capabilities/new/basic" replace />,
+      },
       { path: "capabilities/new/basic", element: <CapabilityBasicPage /> },
       { path: "capabilities/:id/basic", element: <CapabilityBasicPage /> },
       { path: "capabilities/:id", element: <Navigate to="review" replace /> },
@@ -1049,6 +1055,15 @@ export const router = createBrowserRouter([
             children: [{ index: true, element: <AdminExhibitorListPage /> }],
           },
           {
+            path: "admin/logo-manager",
+            element: (
+              <PermissionGuard
+                permission={PERMISSIONS.exhibitorRequirementsManage}
+              />
+            ),
+            children: [{ index: true, element: <LogoManagerPage /> }],
+          },
+          {
             path: "exhibitors",
             element: (
               <PermissionGuard
@@ -1082,7 +1097,9 @@ export const router = createBrowserRouter([
                 permission={PERMISSIONS.exhibitorRequirementsManage}
               />
             ),
-            children: [{ index: true, element: <EmailTemplatePage mode="exhibitor" /> }],
+            children: [
+              { index: true, element: <EmailTemplatePage mode="exhibitor" /> },
+            ],
           },
           {
             path: "exhibitor-email-templates",
@@ -1091,7 +1108,9 @@ export const router = createBrowserRouter([
                 permission={PERMISSIONS.exhibitorRequirementsManage}
               />
             ),
-            children: [{ index: true, element: <EmailTemplatePage mode="exhibitor" /> }],
+            children: [
+              { index: true, element: <EmailTemplatePage mode="exhibitor" /> },
+            ],
           },
           {
             path: "admin/buyers",
@@ -1211,14 +1230,27 @@ export const router = createBrowserRouter([
           { path: "Dashboard", element: <ExhibitorDashboard /> },
           { path: "Scanner", element: <ExhibitorScannerPage /> },
           { path: "Connections", element: <ExhibitorConnectionsPage /> },
-          { path: "AdditionalRequirements", element: <ExhibitorAdditionalRequirementsPage /> },
-          { path: "MyRequirementRequests", element: <Navigate to="/exhibitorShell/AdditionalRequirements?tab=history" replace /> },
+          {
+            path: "AdditionalRequirements",
+            element: <ExhibitorAdditionalRequirementsPage />,
+          },
+          {
+            path: "MyRequirementRequests",
+            element: (
+              <Navigate
+                to="/exhibitorShell/AdditionalRequirements?tab=history"
+                replace
+              />
+            ),
+          },
           { path: "Interests", element: <ExhibitorInterestsPage /> },
           { path: "StallQr", element: <ExhibitorStallQrPage /> },
           { path: "ECard", element: <ExhibitorECardPage /> },
           { path: "ecard", element: <ExhibitorECardPage /> },
           { path: "SendEmail", element: <ExhibitorSendEmailPage /> },
           { path: "send-email", element: <ExhibitorSendEmailPage /> },
+          { path: "EmailLogs", element: <ExhibitorEmailLogsPage /> },
+          { path: "email-logs", element: <ExhibitorEmailLogsPage /> },
           { path: "Profile", element: <ExhibitorProfilePage /> },
         ],
       },

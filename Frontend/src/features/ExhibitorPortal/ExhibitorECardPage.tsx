@@ -137,7 +137,7 @@ export function ExhibitorECardPage() {
 
     const bounds = card.getBoundingClientRect();
     const captureWidth = Math.ceil(Math.max(bounds.width, card.scrollWidth));
-    const captureHeight = Math.ceil(Math.max(bounds.height, card.scrollHeight));
+    const captureHeight = Math.ceil(Math.max(bounds.height, card.scrollHeight)) + 8;
 
     const blob = await toBlob(card, {
       cacheBust: false,
@@ -416,11 +416,16 @@ export function ExhibitorECardPage() {
 
               <div className="border-t sm:border-t-0 sm:border-l border-blue-200 flex min-h-[90px] sm:min-h-[120px] flex-col items-center justify-center p-3 sm:p-5 text-center bg-blue-50/20">
                 <p className="text-[10px] sm:text-xs font-bold uppercase tracking-wide text-slate-500">
-                  Fascia Name
+                  Company Name
                 </p>
                 <p className="mt-1 sm:mt-2 break-words text-base sm:text-xl font-extrabold text-blue-900">
-                  {cardData.fasciaName || cardData.companyName}
+                  {cardData.legalName || cardData.companyName}
                 </p>
+                {cardData.fasciaName && cardData.fasciaName.toLowerCase() !== (cardData.legalName || cardData.companyName).toLowerCase() && (
+                  <p className="text-[11px] font-medium text-slate-500 mt-0.5">
+                    Fascia: {cardData.fasciaName}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -448,7 +453,7 @@ export function ExhibitorECardPage() {
                 <div className="text-center py-4">
                   <Building2 className="mx-auto h-8 w-8 text-slate-300 mb-1" />
                   <p className="text-xs sm:text-sm font-bold text-slate-500">
-                    {cardData.companyName}
+                    {cardData.legalName || cardData.companyName}
                   </p>
                   <p className="mt-0.5 text-[10px] sm:text-xs text-slate-400">
                     Company Logo
@@ -505,7 +510,7 @@ export function ExhibitorECardPage() {
                     Company Name
                   </p>
                   <p className="mt-1 font-bold text-xs sm:text-sm text-slate-900">
-                    {cardData.companyName}
+                    {cardData.legalName || cardData.companyName}
                   </p>
                 </div>
 
