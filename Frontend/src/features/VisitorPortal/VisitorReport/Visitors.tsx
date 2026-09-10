@@ -565,65 +565,6 @@ export const VisitorList: React.FC<VisitorListProps> = ({ tenantId, eventId }) =
 
             {/* Warm-up Invitation Broadcast Modal */}
             {isInviteModalOpen && (
-<<<<<<< HEAD
-                <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
-                    <div className="bg-white rounded-xl shadow-xl border border-slate-200 w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-                        <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
-                            <div>
-                                <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                                    <Send className="w-4 h-4 text-indigo-600" />
-                                    {inviteTargetVisitor ? 'Send Warm-up Email' : 'Bulk Warm-up Broadcast'}
-                                </h2>
-                                <p className="text-[11px] text-slate-500 mt-0.5">
-                                    {inviteTargetVisitor
-                                        ? `Recipient: ${inviteTargetVisitor.legalName} (${inviteTargetVisitor.email})`
-                                        : `Targeting all registered visitors (${filteredVisitors.length} recipients)`}
-                                </p>
-                            </div>
-                            <button onClick={() => setIsInviteModalOpen(false)} className="p-1 text-slate-400 hover:text-slate-600 rounded-lg">
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                        <div className="p-5 space-y-4 text-xs">
-                            {inviteSuccessMsg ? (
-                                <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-lg flex items-start gap-2.5">
-                                    <CheckCircle2 className="w-5 h-5 shrink-0 mt-0.5 text-emerald-600" />
-                                    <div className="space-y-1">
-                                        <p className="font-semibold text-emerald-800">Dispatch Complete</p>
-                                        <p className="text-xs leading-relaxed">{inviteSuccessMsg}</p>
-                                    </div>
-                                </div>
-                            ) : (
-                                <>
-                                    <div className="space-y-1.5">
-                                        <label className="font-semibold text-slate-700">Warm-up Timeline Type</label>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <button
-                                                type="button"
-                                                onClick={() => setCountdownType(WarmupCountdownType.DaysToGo)}
-                                                className={`p-2.5 text-left border rounded-lg transition-all ${
-                                                    countdownType === WarmupCountdownType.DaysToGo
-                                                        ? 'bg-indigo-50 border-indigo-500 text-indigo-700'
-                                                        : 'border-slate-200 hover:bg-slate-50 text-slate-600'
-                                                }`}
-                                            >
-                                                Countdown (Days to go)
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => setCountdownType(WarmupCountdownType.Today)}
-                                                className={`p-2.5 text-left border rounded-lg transition-all ${
-                                                    countdownType === WarmupCountdownType.Today
-                                                        ? 'bg-indigo-50 border-indigo-500 text-indigo-700'
-                                                        : 'border-slate-200 hover:bg-slate-50 text-slate-600'
-                                                }`}
-                                            >
-                                                Event is Today 🎉
-                                            </button>
-                                        </div>
-                                    </div>
-=======
                 <ModalPortal>
                     <div className="fixed inset-0 z-[99999] bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
                         <div className="bg-white rounded-xl shadow-xl border border-slate-200 w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-150">
@@ -643,7 +584,6 @@ export const VisitorList: React.FC<VisitorListProps> = ({ tenantId, eventId }) =
                                     <X className="w-5 h-5" />
                                 </button>
                             </div>
->>>>>>> aa915a4c12296ec74af9400b1407a57153c2c62f
 
                             <div className="p-5 space-y-4 text-xs">
                                 {inviteSuccessMsg ? (
