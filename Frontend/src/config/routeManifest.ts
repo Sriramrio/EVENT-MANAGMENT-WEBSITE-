@@ -33,7 +33,8 @@ export const routeManifest: RouteManifestItem[] = [
   { path: '/app/admin/event-settings', label: 'Event Settings', permission: PERMISSIONS.adminUsersManage, menu: true, group: 'Administration' },
   { path: '/app/admin/email-templates', label: 'Email Templates', permission: PERMISSIONS.adminUsersManage, menu: true, group: 'Administration' },
   { path: '/app/admin/exhibitors', label: 'Exhibitor List', permission: PERMISSIONS.exhibitorRequirementsManage, menu: true, group: 'Exhibitor Management' },
-  { path: '/app/admin/exhibitor-requirements', label: 'Exhibitor Requirements', permission: PERMISSIONS.exhibitorRequirementsManage, menu: true, group: 'Exhibitor Management' }, { path: '/app/admin/exhibitor-email-templates', label: 'Exhibitor Requirements Email Templates', permission: PERMISSIONS.exhibitorRequirementsManage, menu: true, group: 'Exhibitor Management' }
+  { path: '/app/admin/exhibitor-requirements', label: 'Exhibitor Requirements', permission: PERMISSIONS.exhibitorRequirementsManage, menu: true, group: 'Exhibitor Management' }, { path: '/app/admin/exhibitor-email-templates', label: 'Exhibitor Requirements Email Templates', permission: PERMISSIONS.exhibitorRequirementsManage, menu: true, group: 'Exhibitor Management' },
+  { path: '/app/admin/logo-manager', label: 'Logo Manager', permission: PERMISSIONS.exhibitorRequirementsManage, menu: true, group: 'Exhibitor Management' },
 ];
 
 
