@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Users, AlertCircle, RefreshCw, Briefcase, MapPin, Building2, Calendar, Phone } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Users, AlertCircle, RefreshCw, Briefcase, MapPin, Building2, Calendar, ChevronRight } from 'lucide-react';
 import { apiClient } from '../../../data/api/apiClient';
 
 interface VisitorAdminDashboardProps {
@@ -28,6 +29,7 @@ export function VisitorAdminDashboard({ tenantId, eventId }: VisitorAdminDashboa
   const [summary, setSummary] = useState<VisitorDashboardSummaryDto | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   const fetchDashboard = async () => {
     try {
@@ -76,52 +78,88 @@ export function VisitorAdminDashboard({ tenantId, eventId }: VisitorAdminDashboa
         </div>
       )}
 
-      {/* KPI Cards */}
+      {/* KPI Cards - Clickable Navigation */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm flex items-center gap-4">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
+        {/* 1. Total Visitors Card -> Navigates to normal Visitor List */}
+        <button
+          type="button"
+          onClick={() => navigate('/visitorShell/VisitorList')}
+          className="text-left rounded-2xl border border-slate-200 bg-white p-6 shadow-sm flex items-center gap-4 hover:border-indigo-400 hover:shadow-md transition-all cursor-pointer group focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+          title="Click to view all registered visitors"
+        >
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-all">
             <Users size={28} />
           </div>
-          <div>
-            <p className="text-sm font-medium text-slate-500">Total Visitors</p>
+          <div className="flex-1">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium text-slate-500 group-hover:text-indigo-600 transition-colors">Total Visitors</p>
+              <ChevronRight className="w-4 h-4 text-slate-400 opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
+            </div>
             <p className="mt-1 text-3xl font-extrabold text-slate-900">
               {loading ? '...' : summary?.totalVisitors ?? 0}
             </p>
           </div>
-        </div>
+        </button>
         
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm flex items-center gap-4">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+        {/* 2. Industries Card -> Navigates to Visitor List with Industry focus/filter */}
+        <button
+          type="button"
+          onClick={() => navigate('/visitorShell/VisitorList?focus=industry')}
+          className="text-left rounded-2xl border border-slate-200 bg-white p-6 shadow-sm flex items-center gap-4 hover:border-emerald-400 hover:shadow-md transition-all cursor-pointer group focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+          title="Click to view and filter by industries"
+        >
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-all">
             <Briefcase size={28} />
           </div>
-          <div>
-            <p className="text-sm font-medium text-slate-500">Industries</p>
+          <div className="flex-1">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium text-slate-500 group-hover:text-emerald-600 transition-colors">Industries</p>
+              <ChevronRight className="w-4 h-4 text-slate-400 opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
+            </div>
             <p className="mt-1 text-3xl font-extrabold text-slate-900">
               {loading ? '...' : Object.keys(summary?.visitorsByIndustryCategory ?? {}).length}
             </p>
           </div>
-        </div>
+        </button>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm flex items-center gap-4">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+        {/* 3. States/Districts Card -> Navigates to Visitor List with District/Location focus/filter */}
+        <button
+          type="button"
+          onClick={() => navigate('/visitorShell/VisitorList?focus=district')}
+          className="text-left rounded-2xl border border-slate-200 bg-white p-6 shadow-sm flex items-center gap-4 hover:border-amber-400 hover:shadow-md transition-all cursor-pointer group focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+          title="Click to view and filter by state/district"
+        >
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-all">
             <MapPin size={28} />
           </div>
-          <div>
-            <p className="text-sm font-medium text-slate-500">States/Districts</p>
+          <div className="flex-1">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium text-slate-500 group-hover:text-amber-600 transition-colors">States/Districts</p>
+              <ChevronRight className="w-4 h-4 text-slate-400 opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
+            </div>
             <p className="mt-1 text-3xl font-extrabold text-slate-900">
               {loading ? '...' : Object.keys(summary?.visitorsByState ?? {}).length}
             </p>
           </div>
-        </div>
+        </button>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Visitors by Industry */}
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2 mb-4">
-            <Building2 className="w-5 h-5 text-indigo-600" />
-            Visitors by Industry
-          </h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+              <Building2 className="w-5 h-5 text-indigo-600" />
+              Visitors by Industry
+            </h3>
+            <button
+              type="button"
+              onClick={() => navigate('/visitorShell/VisitorList?focus=industry')}
+              className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-0.5 hover:underline"
+            >
+              View Filter <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
           <div className="space-y-4">
             {loading ? (
               <p className="text-slate-500">Loading...</p>
@@ -130,9 +168,18 @@ export function VisitorAdminDashboard({ tenantId, eventId }: VisitorAdminDashboa
             ) : (
               <ul className="divide-y divide-slate-100">
                 {Object.entries(summary?.visitorsByIndustryCategory ?? {}).map(([industry, count]) => (
-                  <li key={industry} className="py-3 flex justify-between items-center">
-                    <span className="text-sm font-medium text-slate-700">{industry}</span>
-                    <span className="text-sm font-bold bg-slate-100 text-slate-800 px-2 py-1 rounded-lg">{count}</span>
+                  <li
+                    key={industry}
+                    onClick={() => navigate(`/visitorShell/VisitorList?industry=${encodeURIComponent(industry)}`)}
+                    className="py-3 px-2.5 -mx-2 rounded-xl flex justify-between items-center hover:bg-slate-50 cursor-pointer transition-colors group"
+                    title={`Filter visitors by ${industry}`}
+                  >
+                    <span className="text-sm font-medium text-slate-700 group-hover:text-indigo-600 transition-colors">
+                      {industry}
+                    </span>
+                    <span className="text-sm font-bold bg-slate-100 text-slate-800 group-hover:bg-indigo-50 group-hover:text-indigo-700 px-2.5 py-1 rounded-lg transition-colors">
+                      {count}
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -142,10 +189,19 @@ export function VisitorAdminDashboard({ tenantId, eventId }: VisitorAdminDashboa
 
         {/* Visitors by State/District */}
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2 mb-4">
-            <MapPin className="w-5 h-5 text-indigo-600" />
-            Visitors by Location
-          </h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+              <MapPin className="w-5 h-5 text-indigo-600" />
+              Visitors by Location
+            </h3>
+            <button
+              type="button"
+              onClick={() => navigate('/visitorShell/VisitorList?focus=district')}
+              className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-0.5 hover:underline"
+            >
+              View Filter <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
           <div className="space-y-4">
             {loading ? (
               <p className="text-slate-500">Loading...</p>
@@ -154,9 +210,18 @@ export function VisitorAdminDashboard({ tenantId, eventId }: VisitorAdminDashboa
             ) : (
               <ul className="divide-y divide-slate-100">
                 {Object.entries(summary?.visitorsByState ?? {}).map(([state, count]) => (
-                  <li key={state} className="py-3 flex justify-between items-center">
-                    <span className="text-sm font-medium text-slate-700">{state}</span>
-                    <span className="text-sm font-bold bg-slate-100 text-slate-800 px-2 py-1 rounded-lg">{count}</span>
+                  <li
+                    key={state}
+                    onClick={() => navigate(`/visitorShell/VisitorList?district=${encodeURIComponent(state)}`)}
+                    className="py-3 px-2.5 -mx-2 rounded-xl flex justify-between items-center hover:bg-slate-50 cursor-pointer transition-colors group"
+                    title={`Filter visitors from ${state}`}
+                  >
+                    <span className="text-sm font-medium text-slate-700 group-hover:text-indigo-600 transition-colors">
+                      {state}
+                    </span>
+                    <span className="text-sm font-bold bg-slate-100 text-slate-800 group-hover:bg-indigo-50 group-hover:text-indigo-700 px-2.5 py-1 rounded-lg transition-colors">
+                      {count}
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -167,10 +232,19 @@ export function VisitorAdminDashboard({ tenantId, eventId }: VisitorAdminDashboa
 
       {/* Recent Visitors */}
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2 mb-4">
-          <Calendar className="w-5 h-5 text-indigo-600" />
-          Recent Registrations
-        </h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+            <Calendar className="w-5 h-5 text-indigo-600" />
+            Recent Registrations
+          </h3>
+          <button
+            type="button"
+            onClick={() => navigate('/visitorShell/VisitorList')}
+            className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-0.5 hover:underline"
+          >
+            View All Visitors <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
         {loading ? (
           <p className="text-slate-500">Loading...</p>
         ) : !summary?.recentVisitors?.length ? (
@@ -190,7 +264,12 @@ export function VisitorAdminDashboard({ tenantId, eventId }: VisitorAdminDashboa
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {summary.recentVisitors.map((visitor) => (
-                  <tr key={visitor.id} className="hover:bg-slate-50 transition-colors">
+                  <tr
+                    key={visitor.id}
+                    onClick={() => navigate(`/visitorShell/VisitorList?search=${encodeURIComponent(visitor.registrationNumber)}`)}
+                    className="hover:bg-slate-50 transition-colors cursor-pointer"
+                    title={`View details for ${visitor.registrationNumber}`}
+                  >
                     <td className="py-3 px-4 font-mono font-medium text-indigo-600">
                       {visitor.registrationNumber}
                     </td>

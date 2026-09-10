@@ -1,4 +1,5 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
     Users,
     Search,
@@ -14,7 +15,8 @@ import {
     Send,
     Calendar,
     CheckCircle2,
-    AlertCircle
+    AlertCircle,
+    FilterX
 } from 'lucide-react';
 import { apiClient } from '../../../data/api/apiClient';
 
@@ -56,6 +58,10 @@ enum WarmupCountdownType {
 }
 
 export const VisitorList: React.FC<VisitorListProps> = ({ tenantId, eventId }) => {
+    const [searchParams, setSearchParams] = useSearchParams();
+    const districtSelectRef = useRef<HTMLSelectElement>(null);
+    const industrySelectRef = useRef<HTMLSelectElement>(null);
+
     const [visitors, setVisitors] = useState<Visitor[]>([]);
     const [filteredVisitors, setFilteredVisitors] = useState<Visitor[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
@@ -65,6 +71,7 @@ export const VisitorList: React.FC<VisitorListProps> = ({ tenantId, eventId }) =
     const [searchQuery, setSearchQuery] = useState<string>('');
     const [selectedIndustry, setSelectedIndustry] = useState<string>('');
     const [selectedDistrict, setSelectedDistrict] = useState<string>('');
+    const [activeFocus, setActiveFocus] = useState<string | null>(null);
 
     // Selected Visitor for View Modal
     const [selectedVisitor, setSelectedVisitor] = useState<Visitor | null>(null);
@@ -107,6 +114,30 @@ export const VisitorList: React.FC<VisitorListProps> = ({ tenantId, eventId }) =
         }
     }, [tenantId, eventId]);
 
+    // Handle incoming URL search params (e.g., from Dashboard cards/links)
+    useEffect(() => {
+        const ind = searchParams.get('industry');
+        const dist = searchParams.get('district');
+        const search = searchParams.get('search');
+        const focus = searchParams.get('focus');
+
+        if (ind !== null) setSelectedIndustry(ind);
+        if (dist !== null) setSelectedDistrict(dist);
+        if (search !== null) setSearchQuery(search);
+        if (focus) {
+            setActiveFocus(focus);
+            setTimeout(() => {
+                if (focus === 'industry' && industrySelectRef.current) {
+                    industrySelectRef.current.focus();
+                } else if (focus === 'district' && districtSelectRef.current) {
+                    districtSelectRef.current.focus();
+                }
+            }, 150);
+        } else {
+            setActiveFocus(null);
+        }
+    }, [searchParams]);
+
     // Apply search, industry, and district filtering
     useEffect(() => {
         let result = visitors;
@@ -128,7 +159,7 @@ export const VisitorList: React.FC<VisitorListProps> = ({ tenantId, eventId }) =
         }
 
         if (selectedDistrict) {
-            result = result.filter((v) => v.district === selectedDistrict);
+            result = result.filter((v) => (v.district === selectedDistrict || v.state === selectedDistrict));
         }
 
         setFilteredVisitors(result);
@@ -157,6 +188,14 @@ export const VisitorList: React.FC<VisitorListProps> = ({ tenantId, eventId }) =
     const uniqueDistricts = Array.from(
         new Set(visitors.map((v) => v.district).filter(Boolean))
     );
+
+    const handleClearAllFilters = () => {
+        setSelectedIndustry('');
+        setSelectedDistrict('');
+        setSearchQuery('');
+        setActiveFocus(null);
+        setSearchParams({});
+    };
 
     // CSV Export Handler
     const handleExportCSV = () => {
@@ -248,25 +287,19 @@ export const VisitorList: React.FC<VisitorListProps> = ({ tenantId, eventId }) =
 
     function SortIndicator({ column }: { column: SortKey }) {
         if (sortKey !== column) {
-            return <span className="ml-1 text-slate-300">↕</span>;
+            return <span className="text-slate-300 ml-1">↕</span>;
         }
-
-        return (
-            <span className="ml-1 text-slate-700">
-                {sortDirection === 'asc' ? '↑' : '↓'}
-            </span>
-        );
+        return <span className="text-indigo-600 font-bold ml-1">{sortDirection === 'asc' ? '↑' : '↓'}</span>;
     }
 
-    // Pagination logic applied to sortedVisitors
+    // Pagination calculations
     const totalPages = Math.ceil(sortedVisitors.length / itemsPerPage) || 1;
-    const paginatedVisitors = sortedVisitors.slice(
-        (currentPage - 1) * itemsPerPage,
-        currentPage * itemsPerPage
-    );
+    const paginatedVisitors = sortedVisitors.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+    const isAnyFilterActive = Boolean(selectedIndustry || selectedDistrict || searchQuery);
 
     return (
-        <div className="p-6 bg-slate-50 min-h-screen space-y-5">
+        <div className="space-y-4">
             {/* Header Section */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
@@ -274,7 +307,7 @@ export const VisitorList: React.FC<VisitorListProps> = ({ tenantId, eventId }) =
                         <Users className="w-5 h-5 text-indigo-600" /> Registered Visitors
                     </h1>
                     <p className="text-xs text-slate-500 mt-1">
-                        Total {sortedVisitors.length} visitors found
+                        Total {sortedVisitors.length} visitors found {isAnyFilterActive ? `(filtered from ${visitors.length})` : ''}
                     </p>
                 </div>
 
@@ -322,28 +355,60 @@ export const VisitorList: React.FC<VisitorListProps> = ({ tenantId, eventId }) =
                     />
                 </div>
 
-                <div className="w-full md:w-auto flex flex-col sm:flex-row items-center gap-2">
-                    <select
-                        value={selectedDistrict}
-                        onChange={(e) => setSelectedDistrict(e.target.value)}
-                        className="w-full sm:w-44 px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 text-slate-700"
-                    >
-                        <option value="">All Districts</option>
-                        {uniqueDistricts.map((dist) => (
-                            <option key={dist} value={dist}>{dist}</option>
-                        ))}
-                    </select>
+                <div className="w-full md:w-auto flex flex-wrap items-center gap-2">
+                    {/* District Dropdown */}
+                    <div className="relative">
+                        <select
+                            ref={districtSelectRef}
+                            value={selectedDistrict}
+                            onChange={(e) => setSelectedDistrict(e.target.value)}
+                            className={`w-full sm:w-44 px-3 py-1.5 text-xs rounded-lg transition-all text-slate-700 cursor-pointer ${
+                                selectedDistrict
+                                    ? 'bg-amber-50 border-2 border-amber-500 font-semibold text-amber-900 shadow-xs'
+                                    : activeFocus === 'district'
+                                    ? 'bg-amber-50/70 border-2 border-amber-400 ring-2 ring-amber-400/30'
+                                    : 'bg-slate-50 border border-slate-200 focus:outline-none focus:border-indigo-500'
+                            }`}
+                        >
+                            <option value="">All Districts</option>
+                            {uniqueDistricts.map((dist) => (
+                                <option key={dist} value={dist}>{dist}</option>
+                            ))}
+                        </select>
+                    </div>
 
-                    <select
-                        value={selectedIndustry}
-                        onChange={(e) => setSelectedIndustry(e.target.value)}
-                        className="w-full sm:w-44 px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 text-slate-700"
-                    >
-                        <option value="">All Industries</option>
-                        {uniqueIndustries.map((ind) => (
-                            <option key={ind} value={ind}>{ind}</option>
-                        ))}
-                    </select>
+                    {/* Industry Dropdown */}
+                    <div className="relative">
+                        <select
+                            ref={industrySelectRef}
+                            value={selectedIndustry}
+                            onChange={(e) => setSelectedIndustry(e.target.value)}
+                            className={`w-full sm:w-48 px-3 py-1.5 text-xs rounded-lg transition-all text-slate-700 cursor-pointer ${
+                                selectedIndustry
+                                    ? 'bg-emerald-50 border-2 border-emerald-500 font-semibold text-emerald-900 shadow-xs'
+                                    : activeFocus === 'industry'
+                                    ? 'bg-emerald-50/70 border-2 border-emerald-400 ring-2 ring-emerald-400/30'
+                                    : 'bg-slate-50 border border-slate-200 focus:outline-none focus:border-indigo-500'
+                            }`}
+                        >
+                            <option value="">All Industries</option>
+                            {uniqueIndustries.map((ind) => (
+                                <option key={ind} value={ind}>{ind}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Clear Filters Button */}
+                    {isAnyFilterActive && (
+                        <button
+                            type="button"
+                            onClick={handleClearAllFilters}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-rose-600 bg-rose-50 border border-rose-200 rounded-lg hover:bg-rose-100 transition-colors shadow-xs"
+                            title="Reset all filters"
+                        >
+                            <FilterX className="w-3.5 h-3.5" /> Clear Filters
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -381,43 +446,85 @@ export const VisitorList: React.FC<VisitorListProps> = ({ tenantId, eventId }) =
                                 <th className="py-3 px-4 text-center">Actions</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100 text-slate-700">
+                        <tbody className="divide-y divide-slate-100">
                             {loading ? (
                                 <tr>
-                                    <td colSpan={7} className="py-8 text-center text-slate-400">Loading visitors list...</td>
+                                    <td colSpan={7} className="text-center py-10 text-slate-400">
+                                        <div className="flex flex-col items-center justify-center gap-2">
+                                            <RefreshCw className="w-5 h-5 animate-spin text-indigo-600" />
+                                            <span>Loading visitors...</span>
+                                        </div>
+                                    </td>
                                 </tr>
                             ) : paginatedVisitors.length === 0 ? (
                                 <tr>
-                                    <td colSpan={7} className="py-8 text-center text-slate-400">No visitor records found.</td>
+                                    <td colSpan={7} className="text-center py-12 text-slate-400">
+                                        <div className="flex flex-col items-center justify-center gap-2">
+                                            <Users className="w-8 h-8 text-slate-300" />
+                                            <p className="font-semibold text-slate-600">No visitors found</p>
+                                            <p className="text-xs text-slate-400">Try adjusting your search query or dropdown filters.</p>
+                                            {isAnyFilterActive && (
+                                                <button
+                                                    type="button"
+                                                    onClick={handleClearAllFilters}
+                                                    className="mt-2 px-3 py-1 text-xs font-semibold text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors"
+                                                >
+                                                    Clear All Filters
+                                                </button>
+                                            )}
+                                        </div>
+                                    </td>
                                 </tr>
                             ) : (
                                 paginatedVisitors.map((visitor) => (
-                                    <tr key={visitor.id} className="hover:bg-slate-50/80 transition-colors">
-                                        <td className="py-3 px-4 font-mono font-medium text-indigo-600">{visitor.registrationNumber}</td>
-                                        <td className="py-3 px-4 font-semibold text-slate-900">{visitor.legalName}</td>
-                                        <td className="py-3 px-4">{visitor.contactPersonName}</td>
-                                        <td className="py-3 px-4 font-mono">{visitor.mobile}</td>
-                                        <td className="py-3 px-4">{visitor.city}{visitor.district ? `, ${visitor.district}` : ''}</td>
+                                    <tr key={visitor.id} className="hover:bg-slate-50 transition-colors">
+                                        <td className="py-3 px-4 font-mono font-medium text-indigo-600">
+                                            {visitor.registrationNumber}
+                                        </td>
+                                        <td className="py-3 px-4 font-semibold text-slate-900">
+                                            {visitor.legalName}
+                                            {visitor.tradeName && visitor.tradeName !== visitor.legalName && (
+                                                <span className="block text-[10px] text-slate-400 font-normal">
+                                                    ({visitor.tradeName})
+                                                </span>
+                                            )}
+                                        </td>
+                                        <td className="py-3 px-4 text-slate-700">
+                                            {visitor.contactPersonName}
+                                            {visitor.contactPersonDesignation && (
+                                                <span className="block text-[10px] text-slate-400">
+                                                    {visitor.contactPersonDesignation}
+                                                </span>
+                                            )}
+                                        </td>
+                                        <td className="py-3 px-4 font-mono text-slate-600">
+                                            {visitor.mobile}
+                                        </td>
+                                        <td className="py-3 px-4 text-slate-600">
+                                            {visitor.city}{visitor.district ? `, ${visitor.district}` : ''}
+                                        </td>
                                         <td className="py-3 px-4">
-                                            <span className="inline-block bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[11px]">
-                                                {visitor.industryCategory || 'N/A'}
+                                            <span className="inline-block bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[10px] font-medium">
+                                                {visitor.industryCategory || 'Others'}
                                             </span>
                                         </td>
-                                        <td className="py-3 px-4 text-center flex items-center justify-center gap-1">
-                                            <button
-                                                onClick={() => setSelectedVisitor(visitor)}
-                                                className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                                                title="View Details"
-                                            >
-                                                <Eye className="w-4 h-4" />
-                                            </button>
-                                            <button
-                                                onClick={() => openSingleInviteModal(visitor)}
-                                                className="p-1.5 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
-                                                title="Send Single Warm-up Email"
-                                            >
-                                                <Send className="w-4 h-4" />
-                                            </button>
+                                        <td className="py-3 px-4 text-center">
+                                            <div className="flex items-center justify-center gap-1.5">
+                                                <button
+                                                    onClick={() => setSelectedVisitor(visitor)}
+                                                    className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors"
+                                                    title="View Full Details"
+                                                >
+                                                    <Eye className="w-4 h-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => openSingleInviteModal(visitor)}
+                                                    className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors"
+                                                    title="Send Warm-up Email"
+                                                >
+                                                    <Send className="w-4 h-4" />
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))
@@ -426,44 +533,49 @@ export const VisitorList: React.FC<VisitorListProps> = ({ tenantId, eventId }) =
                     </table>
                 </div>
 
-                {/* Pagination Controls */}
-                {totalPages > 1 && (
-                    <div className="px-4 py-3 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
-                        <span className="text-xs text-slate-500">Page {currentPage} of {totalPages}</span>
-                        <div className="flex items-center gap-1">
-                            <button
-                                onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-                                disabled={currentPage === 1}
-                                className="p-1 rounded bg-white border border-slate-200 text-slate-600 disabled:opacity-40"
-                            >
-                                <ChevronLeft className="w-4 h-4" />
-                            </button>
-                            <button
-                                onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
-                                disabled={currentPage === totalPages}
-                                className="p-1 rounded bg-white border border-slate-200 text-slate-600 disabled:opacity-40"
-                            >
-                                <ChevronRight className="w-4 h-4" />
-                            </button>
-                        </div>
+                {/* Pagination */}
+                <div className="p-3 border-t border-slate-100 flex items-center justify-between">
+                    <span className="text-xs text-slate-500">
+                        Showing {(currentPage - 1) * itemsPerPage + 1} to{' '}
+                        {Math.min(currentPage * itemsPerPage, sortedVisitors.length)} of {sortedVisitors.length} visitors
+                    </span>
+
+                    <div className="flex items-center gap-1">
+                        <button
+                            onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
+                            disabled={currentPage === 1 || loading}
+                            className="p-1 border border-slate-200 rounded hover:bg-slate-50 disabled:opacity-50 text-slate-600"
+                        >
+                            <ChevronLeft className="w-4 h-4" />
+                        </button>
+                        <span className="px-2 text-xs font-semibold text-slate-700">
+                            Page {currentPage} of {totalPages}
+                        </span>
+                        <button
+                            onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
+                            disabled={currentPage === totalPages || loading}
+                            className="p-1 border border-slate-200 rounded hover:bg-slate-50 disabled:opacity-50 text-slate-600"
+                        >
+                            <ChevronRight className="w-4 h-4" />
+                        </button>
                     </div>
-                )}
+                </div>
             </div>
 
-            {/* Send Warm-up Invite Modal */}
+            {/* Warm-up Invitation Broadcast Modal */}
             {isInviteModalOpen && (
                 <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
                     <div className="bg-white rounded-xl shadow-xl border border-slate-200 w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-150">
                         <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
                             <div>
-                                <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                                    <Calendar className="w-4 h-4 text-indigo-600" />
-                                    {inviteTargetVisitor ? 'Send Single Invitation' : 'Send Bulk Warm-up Broadcast'}
+                                <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                                    <Send className="w-4 h-4 text-indigo-600" />
+                                    {inviteTargetVisitor ? 'Send Warm-up Email' : 'Bulk Warm-up Broadcast'}
                                 </h2>
                                 <p className="text-[11px] text-slate-500 mt-0.5">
                                     {inviteTargetVisitor
-                                        ? `Recipient: ${inviteTargetVisitor.contactPersonName || inviteTargetVisitor.legalName}`
-                                        : `Targeting all ${visitors.length} registered visitors`}
+                                        ? `Recipient: ${inviteTargetVisitor.legalName} (${inviteTargetVisitor.email})`
+                                        : `Targeting all registered visitors (${filteredVisitors.length} recipients)`}
                                 </p>
                             </div>
                             <button onClick={() => setIsInviteModalOpen(false)} className="p-1 text-slate-400 hover:text-slate-600 rounded-lg">
@@ -473,30 +585,33 @@ export const VisitorList: React.FC<VisitorListProps> = ({ tenantId, eventId }) =
 
                         <div className="p-5 space-y-4 text-xs">
                             {inviteSuccessMsg ? (
-                                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-center font-medium flex flex-col items-center gap-2">
-                                    <CheckCircle2 className="w-6 h-6 text-emerald-600" />
-                                    {inviteSuccessMsg}
+                                <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-lg flex items-start gap-2.5">
+                                    <CheckCircle2 className="w-5 h-5 shrink-0 mt-0.5 text-emerald-600" />
+                                    <div className="space-y-1">
+                                        <p className="font-semibold text-emerald-800">Dispatch Complete</p>
+                                        <p className="text-xs leading-relaxed">{inviteSuccessMsg}</p>
+                                    </div>
                                 </div>
                             ) : (
                                 <>
                                     <div className="space-y-1.5">
-                                        <label className="font-semibold text-slate-700">Event Warm-up Timing</label>
+                                        <label className="font-semibold text-slate-700">Warm-up Timeline Type</label>
                                         <div className="grid grid-cols-2 gap-2">
                                             <button
                                                 type="button"
                                                 onClick={() => setCountdownType(WarmupCountdownType.DaysToGo)}
-                                                className={`p-2.5 rounded-lg border text-left font-medium transition-all ${
+                                                className={`p-2.5 text-left border rounded-lg transition-all ${
                                                     countdownType === WarmupCountdownType.DaysToGo
                                                         ? 'bg-indigo-50 border-indigo-500 text-indigo-700'
                                                         : 'border-slate-200 hover:bg-slate-50 text-slate-600'
                                                 }`}
                                             >
-                                                Days To Go
+                                                Countdown (Days to go)
                                             </button>
                                             <button
                                                 type="button"
                                                 onClick={() => setCountdownType(WarmupCountdownType.Today)}
-                                                className={`p-2.5 rounded-lg border text-left font-medium transition-all ${
+                                                className={`p-2.5 text-left border rounded-lg transition-all ${
                                                     countdownType === WarmupCountdownType.Today
                                                         ? 'bg-indigo-50 border-indigo-500 text-indigo-700'
                                                         : 'border-slate-200 hover:bg-slate-50 text-slate-600'
