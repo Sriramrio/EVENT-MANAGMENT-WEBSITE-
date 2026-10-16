@@ -17,9 +17,26 @@ using MSME.StallBooking.Persistence;
 using MSME.StallBooking.Persistence.Repositories;
 using QuestPDF.Infrastructure;
 using System.Text;
+using Microsoft.AspNetCore.HttpOverrides;
 using static MSME.StallBooking.Application.Services.PaymentWorkflowService;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Render supplies PORT. Listen on all interfaces inside the container.
+var renderPort = Environment.GetEnvironmentVariable("PORT");
+if (!string.IsNullOrWhiteSpace(renderPort))
+{
+    if (!int.TryParse(renderPort, out var parsedPort) || parsedPort is < 1 or > 65535)
+        throw new InvalidOperationException("Invalid Render PORT value.");
+    builder.WebHost.UseUrls($"http://0.0.0.0:{parsedPort}");
+}
+
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    // Configure KnownProxies/KnownNetworks for the trusted proxy infrastructure
+    // before enabling forwarded headers in production.
+});
 
 builder.Services.AddControllers().AddJsonOptions(options =>
 {
@@ -37,7 +54,14 @@ builder.Services.AddDbContext<StallBookingDbContext>(options =>
     options.UseNpgsql(connectionString);
 });
 
-var jwtKey = builder.Configuration["Jwt:SigningKey"] ?? "CHANGE_THIS_DEVELOPMENT_SIGNING_KEY_MINIMUM_32_CHARS";
+var jwtKey = builder.Configuration["Jwt:SigningKey"];
+if (string.IsNullOrWhiteSpace(jwtKey) || Encoding.UTF8.GetByteCount(jwtKey) < 32 ||
+    jwtKey.StartsWith("CHANGE_THIS_", StringComparison.OrdinalIgnoreCase))
+    throw new InvalidOperationException("Configure a strong Jwt:SigningKey (32+ bytes) using environment variables.");
+
+if (string.IsNullOrWhiteSpace(builder.Configuration["Jwt:Issuer"]) ||
+    string.IsNullOrWhiteSpace(builder.Configuration["Jwt:Audience"]))
+    throw new InvalidOperationException("Jwt:Issuer and Jwt:Audience are required.");
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -70,167 +94,3 @@ builder.Services.AddScoped<IQrCodeService, QrCodeService>();
 builder.Services.AddScoped<VisitorWorkflowService>();
 builder.Services.AddScoped<VipWorkflowService>(); 
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<CreateVisitorCommand>());
-
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AdminPortal", policy =>
-    {
-        var origins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? ["http://localhost:5173"];
-        policy.WithOrigins(origins).AllowAnyHeader().AllowAnyMethod().AllowCredentials();
-    });
-});
-QuestPDF.Settings.License = LicenseType.Community;
-
-var app = builder.Build();
-
-app.UseMiddleware<ExceptionHandlingMiddleware>();
-app.UseSwagger();
-app.UseSwaggerUI();
-app.UseHttpsRedirection();
-app.UseCors("AdminPortal");
-app.UseAuthentication();
-app.UseAuthorization();
-app.MapControllers();
-
-using (var scope = app.Services.CreateScope())
-{
-    try
-    {
-        var db = scope.ServiceProvider.GetRequiredService<StallBookingDbContext>();
-        var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
-        var eventCode = config["EventDefaults:EventCode"] ?? "MSME-HOSUR-2026";
-        var evt = await db.Events.FirstOrDefaultAsync(x => x.EventCode == eventCode.ToUpper())
-            ?? await db.Events.FirstOrDefaultAsync();
-
-        var tenant = await db.Tenants.FirstOrDefaultAsync();
-        var tenantId = evt?.TenantId ?? tenant?.Id ?? Guid.Parse("11111111-1111-1111-1111-111111111111");
-        var eventId = evt?.Id;
-
-        var existingTemplates = await db.EmailTemplates
-            .Where(x => x.TenantId == tenantId)
-            .ToListAsync();
-
-        var existingCodes = new HashSet<string>(
-            existingTemplates.Select(x => x.TemplateCode),
-            StringComparer.OrdinalIgnoreCase);
-
-        bool hasNew = false;
-        foreach (var (code, def) in EmailTemplateCatalog.AllTemplates)
-        {
-            if (!existingCodes.Contains(code))
-            {
-                var newTemplate = EmailTemplate.Create(
-                    tenantId,
-                    eventId,
-                    code,
-                    def.DefaultSubject,
-                    def.DefaultHtmlBody,
-                    "",
-                    true);
-                await db.EmailTemplates.AddAsync(newTemplate);
-                hasNew = true;
-            }
-            else
-            {
-                var existing = existingTemplates.FirstOrDefault(t => string.Equals(t.TemplateCode, code, StringComparison.OrdinalIgnoreCase));
-                if (existing != null && (code.StartsWith("EXHIBITOR_ADDITIONAL_REQUIREMENTS", StringComparison.OrdinalIgnoreCase) ||
-                                         code.StartsWith("ADMIN_ADDITIONAL_REQUIREMENTS", StringComparison.OrdinalIgnoreCase)))
-                {
-                    if (!existing.BodyHtmlTemplate.Contains("{{notes}}", StringComparison.OrdinalIgnoreCase))
-                    {
-                        existing.Update(def.DefaultSubject, def.DefaultHtmlBody, existing.BodyTextTemplate, existing.IsActive);
-                        hasNew = true;
-                    }
-                }
-            }
-        }
-
-        if (hasNew)
-        {
-            await db.SaveChangesAsync();
-        }
-
-        // Seed permission & role for ExhibitorAdmin and ensure image_url column exists
-        try
-        {
-            try
-            {
-                await db.Database.ExecuteSqlRawAsync("ALTER TABLE public.additional_requirement_items ADD COLUMN IF NOT EXISTS image_url text;");
-                await db.Database.ExecuteSqlRawAsync("ALTER TABLE public.exhibitor_additional_requirements ADD COLUMN IF NOT EXISTS notes character varying(2000);");
-            }
-            catch { /* Ignore if already exists or permission restricted */ }
-
-            var permCode = MSME.StallBooking.Application.Security.Permissions.ExhibitorRequirementsManage;
-            var perm = await db.Permissions.FirstOrDefaultAsync(p => p.PermissionCode == permCode);
-            if (perm == null)
-            {
-                perm = Permission.Create(permCode, "Exhibitor Requirements Manage", "ExhibitorManagement", "Manage", "Allows managing exhibitor additional requirements and catalog");
-                perm.StampCreate(tenantId, eventId, null, "seed");
-                await db.Permissions.AddAsync(perm);
-                await db.SaveChangesAsync();
-            }
-
-            var exhibitorAdminRole = await db.Roles.FirstOrDefaultAsync(r => r.RoleCode == "ExhibitorAdmin");
-            if (exhibitorAdminRole == null)
-            {
-                exhibitorAdminRole = Role.Create("ExhibitorAdmin", "Exhibitor Admin", "Exhibitor requirements and catalog management");
-                exhibitorAdminRole.StampCreate(tenantId, eventId, null, "seed");
-                await db.Roles.AddAsync(exhibitorAdminRole);
-                await db.SaveChangesAsync();
-            }
-
-            var superAdminRole = await db.Roles.FirstOrDefaultAsync(r => r.RoleCode == "SuperAdmin");
-
-            var hasExhibitorAdminPerm = await db.RolePermissions.AnyAsync(rp => rp.RoleId == exhibitorAdminRole.Id && rp.PermissionId == perm.Id);
-            if (!hasExhibitorAdminPerm)
-            {
-                var rp = RolePermission.Create(exhibitorAdminRole.Id, perm.Id);
-                rp.StampCreate(tenantId, eventId, null, "seed");
-                await db.RolePermissions.AddAsync(rp);
-            }
-
-            if (superAdminRole != null)
-            {
-                var hasSuperAdminPerm = await db.RolePermissions.AnyAsync(rp => rp.RoleId == superAdminRole.Id && rp.PermissionId == perm.Id);
-                if (!hasSuperAdminPerm)
-                {
-                    var rp = RolePermission.Create(superAdminRole.Id, perm.Id);
-                    rp.StampCreate(tenantId, eventId, null, "seed");
-                    await db.RolePermissions.AddAsync(rp);
-                }
-            }
-
-            // Seed default ExhibitorAdmin user account
-            var exhibitorAdminUser = await db.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == "exhibitoradmin@lubmsmehosur.org");
-            if (exhibitorAdminUser == null)
-            {
-                exhibitorAdminUser = User.Create(
-                    "Exhibitor Requirements Admin",
-                    "exhibitoradmin@lubmsmehosur.org",
-                    "9876543210",
-                    "DEV_ONLY_CHANGE_ME_12345");
-                exhibitorAdminUser.StampCreate(tenantId, eventId, null, "seed");
-                await db.Users.AddAsync(exhibitorAdminUser);
-                await db.SaveChangesAsync();
-
-                var userRole = UserRole.Create(exhibitorAdminUser.Id, exhibitorAdminRole.Id);
-                userRole.StampCreate(tenantId, eventId, null, "seed");
-                await db.UserRoles.AddAsync(userRole);
-            }
-
-            await db.SaveChangesAsync();
-        }
-        catch (Exception ex)
-        {
-            var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-            logger.LogWarning(ex, "Note: Additional requirements table setup / role seed warning: {Message}", ex.Message);
-        }
-    }
-    catch (Exception ex)
-    {
-        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "Failed to auto-seed startup data.");
-    }
-}
-
-app.Run();
